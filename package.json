@@ -1,0 +1,65 @@
+{
+  "name": "learning-supervisor",
+  "version": "1.0.0",
+  "description": "AI-powered learning supervision system with cross-platform support",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:shared\" \"npm run dev:desktop\" \"npm run dev:mobile\"",
+    "dev:shared": "cd packages/shared && npm run dev",
+    "dev:desktop": "cd packages/desktop && npm run dev",
+    "dev:mobile": "cd packages/mobile && npm run dev",
+    "dev:backend": "cd packages/backend && npm run dev",
+    "build": "npm run build:shared && npm run build:desktop && npm run build:mobile",
+    "build:shared": "cd packages/shared && npm run build",
+    "build:desktop": "cd packages/desktop && npm run build",
+    "build:mobile": "cd packages/mobile && npm run build",
+    "build:backend": "cd packages/backend && npm run build",
+    "test": "npm run test:shared && npm run test:desktop && npm run test:mobile",
+    "test:shared": "cd packages/shared && npm run test",
+    "test:desktop": "cd packages/desktop && npm run test",
+    "test:mobile": "cd packages/mobile && npm run test",
+    "lint": "eslint packages/*/src --ext .ts,.tsx",
+    "lint:fix": "eslint packages/*/src --ext .ts,.tsx --fix",
+    "clean": "rimraf packages/*/dist packages/*/build packages/*/node_modules node_modules",
+    "setup": "npm install && npm run setup:packages",
+    "setup:packages": "npm run setup:shared && npm run setup:desktop && npm run setup:mobile && npm run setup:backend",
+    "setup:shared": "cd packages/shared && npm install",
+    "setup:desktop": "cd packages/desktop && npm install",
+    "setup:mobile": "cd packages/mobile && npm install",
+    "setup:backend": "cd packages/backend && npm install"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/learning-supervisor.git"
+  },
+  "keywords": [
+    "learning",
+    "supervision",
+    "ai",
+    "cross-platform",
+    "electron",
+    "react-native",
+    "supabase",
+    "gemini"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
