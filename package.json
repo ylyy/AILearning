@@ -61,5 +61,8 @@
     "gemini"
   ],
   "author": "Your Name",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@heroicons/react": "^2.2.0"
+  }
 }
