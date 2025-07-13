@@ -43,14 +43,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
-      
-      // 检查本地存储的认证信息
-      if (window.electronAPI) {
-        const settings = await window.electronAPI.settings.get();
-        if (settings.auth?.token && settings.auth?.user) {
-          setUser(settings.auth.user);
-        }
-      }
+
+      // 模拟检查认证状态 - 开发环境下自动登录
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 开发环境下创建一个默认用户
+      const defaultUser: User = {
+        id: 'dev-user-1',
+        email: 'user@example.com',
+        name: '开发用户'
+      };
+
+      setUser(defaultUser);
     } catch (error) {
       console.error('Failed to check auth status:', error);
     } finally {
@@ -61,22 +65,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (credentials: { email: string; password: string }) => {
     try {
       setIsLoading(true);
-      
-      if (!window.electronAPI) {
-        return { success: false, error: 'Electron API not available' };
-      }
 
-      const result = await window.electronAPI.auth.login(credentials);
-      
-      if (result.success) {
-        setUser(result.data.user);
+      // 模拟登录过程
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 简单的验证逻辑
+      if (credentials.email && credentials.password) {
+        const user: User = {
+          id: 'user-' + Date.now(),
+          email: credentials.email,
+          name: credentials.email.split('@')[0]
+        };
+        setUser(user);
         return { success: true };
       } else {
-        return { success: false, error: result.error || '登录失败' };
+        return { success: false, error: '请输入邮箱和密码' };
       }
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: '网络连接失败' };
+      return { success: false, error: '登录失败' };
     } finally {
       setIsLoading(false);
     }
@@ -85,11 +92,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       setIsLoading(true);
-      
-      if (window.electronAPI) {
-        await window.electronAPI.auth.logout();
-      }
-      
+
+      // 模拟登出过程
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
@@ -100,12 +106,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      if (window.electronAPI) {
-        const result = await window.electronAPI.auth.getUser();
-        if (result.success) {
-          setUser(result.data);
-        }
-      }
+      // 在开发环境下，刷新用户信息不做任何操作
+      console.log('Refresh user called');
     } catch (error) {
       console.error('Failed to refresh user:', error);
     }

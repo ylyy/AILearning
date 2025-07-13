@@ -55,10 +55,17 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
   const loadSettings = async () => {
     try {
       setIsLoading(true);
-      
-      if (window.electronAPI) {
-        const savedSettings = await window.electronAPI.settings.get();
-        setSettings({ ...defaultSettings, ...savedSettings });
+
+      // 模拟加载设置
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 尝试从localStorage加载设置
+      const savedSettings = localStorage.getItem('app-settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        setSettings({ ...defaultSettings, ...parsedSettings });
+      } else {
+        setSettings(defaultSettings);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -71,11 +78,10 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
   const updateSettings = async (newSettings: Partial<Settings>) => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
-      
-      if (window.electronAPI) {
-        await window.electronAPI.settings.set(updatedSettings);
-      }
-      
+
+      // 保存到localStorage
+      localStorage.setItem('app-settings', JSON.stringify(updatedSettings));
+
       setSettings(updatedSettings);
     } catch (error) {
       console.error('Failed to update settings:', error);
@@ -85,10 +91,9 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
 
   const resetSettings = async () => {
     try {
-      if (window.electronAPI) {
-        await window.electronAPI.settings.set(defaultSettings);
-      }
-      
+      // 清除localStorage中的设置
+      localStorage.removeItem('app-settings');
+
       setSettings(defaultSettings);
     } catch (error) {
       console.error('Failed to reset settings:', error);
