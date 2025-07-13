@@ -15,7 +15,7 @@
     "pod-install": "cd ios && pod install"
   },
   "dependencies": {
-    "@learning-supervisor/shared": "workspace:*",
+    "@learning-supervisor/shared": "file:../shared",
     "@react-native-async-storage/async-storage": "^1.19.0",
     "@react-native-community/netinfo": "^9.4.0",
     "@react-navigation/native": "^6.1.0",
@@ -23,8 +23,7 @@
     "@react-navigation/bottom-tabs": "^6.5.0",
     "react": "18.2.0",
     "react-native": "0.72.0",
-    "react-native-background-job": "^0.2.9",
-    "react-native-background-task": "^0.2.1",
+
     "react-native-device-info": "^10.8.0",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.12.0",

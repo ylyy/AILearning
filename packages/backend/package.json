@@ -18,14 +18,14 @@
     "functions:deploy": "supabase functions deploy"
   },
   "dependencies": {
-    "@learning-supervisor/shared": "workspace:*",
+    "@learning-supervisor/shared": "file:../shared",
     "@supabase/supabase-js": "^2.38.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.0",
     "express": "^4.18.0",
     "helmet": "^7.0.0",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5",
+    "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.0",
     "winston": "^3.10.0"
   },
