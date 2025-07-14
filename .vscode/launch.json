@@ -1,0 +1,85 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🚀 启动完整应用 (Vite + Electron)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/packages/desktop",
+      "program": "${workspaceFolder}/packages/desktop/node_modules/.bin/concurrently",
+      "args": [
+        "\"npm run dev:react\"",
+        "\"npm run dev:electron\""
+      ],
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "🌐 启动 Vite 开发服务器",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/packages/desktop",
+      "program": "${workspaceFolder}/packages/desktop/node_modules/.bin/vite",
+      "args": ["--host", "0.0.0.0", "--port", "5173"],
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "🖥️ 启动 Electron 应用",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/packages/desktop",
+      "program": "${workspaceFolder}/packages/desktop/node_modules/.bin/electron",
+      "args": ["."],
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "preLaunchTask": "wait-for-vite"
+    },
+    {
+      "name": "🧪 调试 React 组件 (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/packages/desktop/src/renderer",
+      "sourceMapPathOverrides": {
+        "webpack:///src/*": "${webRoot}/*"
+      }
+    },
+    {
+      "name": "🔍 调试 Electron 主进程",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/packages/desktop",
+      "program": "${workspaceFolder}/packages/desktop/node_modules/.bin/electron",
+      "args": ["--inspect=5858", "."],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "🧩 调试 Shared 库",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/packages/shared",
+      "program": "${workspaceFolder}/packages/shared/src/index.ts",
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "🎯 完整调试 (Vite + Electron + Chrome DevTools)",
+      "configurations": [
+        "🌐 启动 Vite 开发服务器",
+        "🧪 调试 React 组件 (Chrome)"
+      ],
+      "stopAll": true
+    }
+  ]
+}

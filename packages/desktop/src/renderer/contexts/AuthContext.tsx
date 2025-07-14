@@ -30,22 +30,30 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // 开发环境下直接设置用户，不需要加载状态
+  const defaultUser: User = {
+    id: 'dev-user-1',
+    email: 'user@example.com',
+    name: '开发用户'
+  };
+
+  const [user, setUser] = useState<User | null>(defaultUser);
+  const [isLoading, setIsLoading] = useState(false);
 
   const isAuthenticated = !!user;
 
   // 初始化时检查用户状态
   useEffect(() => {
-    checkAuthStatus();
+    console.log('AuthProvider初始化，用户:', user);
   }, []);
 
   const checkAuthStatus = async () => {
     try {
+      console.log('开始检查认证状态...');
       setIsLoading(true);
 
-      // 模拟检查认证状态 - 开发环境下自动登录
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 减少加载时间
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // 开发环境下创建一个默认用户
       const defaultUser: User = {
@@ -54,10 +62,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: '开发用户'
       };
 
+      console.log('设置默认用户:', defaultUser);
       setUser(defaultUser);
     } catch (error) {
       console.error('Failed to check auth status:', error);
     } finally {
+      console.log('认证检查完成，设置loading为false');
       setIsLoading(false);
     }
   };

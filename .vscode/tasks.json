@@ -1,0 +1,138 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 启动开发服务器",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/desktop"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🌐 启动 Vite",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev:react"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/desktop"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🖥️ 启动 Electron",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev:electron"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/desktop"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "dependsOn": "wait-for-vite"
+    },
+    {
+      "label": "wait-for-vite",
+      "type": "shell",
+      "command": "npx",
+      "args": ["wait-on", "http://localhost:5173"],
+      "options": {
+        "cwd": "${workspaceFolder}/packages/desktop"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "📦 安装依赖",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/desktop"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      }
+    },
+    {
+      "label": "🧹 清理并重新安装",
+      "type": "shell",
+      "command": "rm",
+      "args": ["-rf", "node_modules", "&&", "npm", "install"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/desktop"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      }
+    },
+    {
+      "label": "🔨 构建应用",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/desktop"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      }
+    },
+    {
+      "label": "🧪 运行测试",
+      "type": "shell",
+      "command": "npm",
+      "args": ["test"],
+      "group": "test",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/desktop"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      }
+    }
+  ]
+}

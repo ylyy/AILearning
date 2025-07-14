@@ -11,6 +11,33 @@ import AnalysisPage from './pages/AnalysisPage';
 import SettingsPage from './pages/SettingsPage';
 import LoadingSpinner from './components/UI/LoadingSpinner';
 
+// 简单的测试组件
+const TestApp: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="bg-white p-8 rounded-lg shadow-lg">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          🎉 AI学习监督系统
+        </h1>
+        <p className="text-gray-600 mb-4">
+          React应用已成功启动！
+        </p>
+        <div className="space-y-2">
+          <p className="text-sm text-gray-500">✅ React 正常工作</p>
+          <p className="text-sm text-gray-500">✅ Tailwind CSS 正常工作</p>
+          <p className="text-sm text-gray-500">✅ Vite 热重载正常</p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          重新加载
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // 受保护的路由组件
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -66,26 +93,6 @@ const AppContent: React.FC = () => {
 
 // 根应用组件
 const App: React.FC = () => {
-  const [isElectronReady, setIsElectronReady] = useState(false);
-
-  useEffect(() => {
-    // 检查Electron API是否可用
-    if (window.electronAPI) {
-      setIsElectronReady(true);
-    } else {
-      // 在开发环境中，可能需要等待一段时间
-      const timer = setTimeout(() => {
-        setIsElectronReady(true);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  if (!isElectronReady) {
-    return <LoadingSpinner />;
-  }
-
   return (
     <AuthProvider>
       <SettingsProvider>

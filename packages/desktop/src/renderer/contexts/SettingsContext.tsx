@@ -45,32 +45,46 @@ interface SettingsProviderProps {
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) => {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // 初始化时加载设置
   useEffect(() => {
-    loadSettings();
+    console.log('SettingsProvider初始化，设置:', defaultSettings);
+    // 直接使用默认设置，不需要异步加载
+    const savedSettings = localStorage.getItem('app-settings');
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        setSettings({ ...defaultSettings, ...parsedSettings });
+      } catch (error) {
+        console.error('解析设置失败:', error);
+      }
+    }
   }, []);
 
   const loadSettings = async () => {
     try {
+      console.log('开始加载设置...');
       setIsLoading(true);
 
-      // 模拟加载设置
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 减少加载时间
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // 尝试从localStorage加载设置
       const savedSettings = localStorage.getItem('app-settings');
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         setSettings({ ...defaultSettings, ...parsedSettings });
+        console.log('加载已保存的设置:', parsedSettings);
       } else {
         setSettings(defaultSettings);
+        console.log('使用默认设置');
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
       setSettings(defaultSettings);
     } finally {
+      console.log('设置加载完成');
       setIsLoading(false);
     }
   };

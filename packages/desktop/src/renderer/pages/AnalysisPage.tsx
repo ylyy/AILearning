@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
 import {
+  AcademicCapIcon,
   ChartBarIcon,
   ClockIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
-  AcademicCapIcon,
-  ExclamationTriangleIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+import React, { useEffect, useState } from 'react';
 
 interface AnalysisData {
   dailyFocus: { date: string; score: number }[];
@@ -29,10 +27,10 @@ const AnalysisPage: React.FC = () => {
     // 模拟加载分析数据
     const loadAnalysisData = async () => {
       setIsLoading(true);
-      
+
       // 模拟API调用延迟
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const mockData: AnalysisData = {
         dailyFocus: [
           { date: '2024-01-01', score: 75 },
@@ -67,7 +65,7 @@ const AnalysisPage: React.FC = () => {
           '周末的学习时间较少，可以适当增加',
         ],
       };
-      
+
       setAnalysisData(mockData);
       setIsLoading(false);
     };
@@ -97,12 +95,13 @@ const AnalysisPage: React.FC = () => {
 
   const TrendIndicator: React.FC<{ value: number }> = ({ value }) => {
     const isPositive = value > 0;
-    const Icon = isPositive ? TrendingUpIcon : TrendingDownIcon;
     const colorClass = isPositive ? 'text-green-600' : 'text-red-600';
-    
+
     return (
       <div className={`flex items-center ${colorClass}`}>
-        <Icon className="h-4 w-4 mr-1" />
+        <span className="text-sm mr-1">
+          {isPositive ? '↗' : '↘'}
+        </span>
         <span className="text-sm font-medium">
           {isPositive ? '+' : ''}{value.toFixed(1)}%
         </span>
@@ -120,7 +119,7 @@ const AnalysisPage: React.FC = () => {
             基于AI分析的学习数据洞察和建议。
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <select
             value={selectedPeriod}
@@ -199,7 +198,7 @@ const AnalysisPage: React.FC = () => {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <TrendingUpIcon className="h-6 w-6 text-purple-500" />
+                <ChartBarIcon className="h-6 w-6 text-purple-500" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
@@ -229,9 +228,9 @@ const AnalysisPage: React.FC = () => {
                   title={`${day.score}分`}
                 />
                 <div className="mt-2 text-xs text-gray-500 text-center">
-                  {new Date(day.date).toLocaleDateString('zh-CN', { 
-                    month: 'short', 
-                    day: 'numeric' 
+                  {new Date(day.date).toLocaleDateString('zh-CN', {
+                    month: 'short',
+                    day: 'numeric'
                   })}
                 </div>
                 <div className="text-xs font-medium text-gray-900">
