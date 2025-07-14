@@ -74,7 +74,7 @@ const ScreenshotsPage: React.FC = () => {
           aiAnalysis: {
             focusScore: Math.floor(Math.random() * 40) + 60, // 60-100
             activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
-            suggestions: ['继续保持专注', '建议适当休息', '学习状态良好'][Math.floor(Math.random() * 3)]
+            suggestions: [['继续保持专注', '建议适当休息'], ['学习状态良好', '保持当前节奏'], ['注意休息', '适当放松']][Math.floor(Math.random() * 3)]
           }
         };
 
@@ -100,7 +100,7 @@ const ScreenshotsPage: React.FC = () => {
             aiAnalysis: {
               focusScore: Math.floor(Math.random() * 40) + 60,
               activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
-              suggestions: ['继续保持专注', '建议适当休息', '学习状态良好'][Math.floor(Math.random() * 3)]
+              suggestions: [['继续保持专注', '建议适当休息'], ['学习状态良好', '保持当前节奏'], ['注意休息', '适当放松']][Math.floor(Math.random() * 3)]
             }
           }));
           setScreenshots(realScreenshots);
@@ -290,7 +290,9 @@ const ScreenshotsPage: React.FC = () => {
                         {screenshot.aiAnalysis?.suggestions && (
                           <div className="mt-2">
                             <p className="text-xs text-gray-600">
-                              建议: {screenshot.aiAnalysis.suggestions.join(', ')}
+                              建议: {Array.isArray(screenshot.aiAnalysis.suggestions)
+                                ? screenshot.aiAnalysis.suggestions.join(', ')
+                                : screenshot.aiAnalysis.suggestions}
                             </p>
                           </div>
                         )}
@@ -391,7 +393,10 @@ const ScreenshotsPage: React.FC = () => {
                       <div>
                         <span className="text-sm text-gray-500">建议:</span>
                         <ul className="mt-1 text-sm text-gray-900 list-disc list-inside">
-                          {selectedScreenshot.aiAnalysis.suggestions.map((suggestion, index) => (
+                          {(Array.isArray(selectedScreenshot.aiAnalysis.suggestions)
+                            ? selectedScreenshot.aiAnalysis.suggestions
+                            : [selectedScreenshot.aiAnalysis.suggestions]
+                          ).map((suggestion, index) => (
                             <li key={index}>{suggestion}</li>
                           ))}
                         </ul>
