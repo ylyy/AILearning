@@ -27,6 +27,7 @@ interface ElectronAPI {
   screenshots: {
     getHistory: (limit?: number) => Promise<any>;
     getStatistics: () => Promise<any>;
+    getThumbnail: (filepath: string) => Promise<any>;
   };
 
   // API调用
@@ -81,6 +82,7 @@ const electronAPI: ElectronAPI = {
   screenshots: {
     getHistory: (limit) => ipcRenderer.invoke('screenshots:getHistory', limit),
     getStatistics: () => ipcRenderer.invoke('screenshots:getStatistics'),
+    getThumbnail: (filepath) => ipcRenderer.invoke('screenshots:getThumbnail', filepath),
   },
 
   // API调用

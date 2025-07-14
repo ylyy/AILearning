@@ -1,22 +1,25 @@
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
 import * as cron from 'node-cron';
+import * as os from 'os';
+import * as path from 'path';
 import screenshot from 'screenshot-desktop';
 
 export class ScreenshotService extends EventEmitter {
   private intervalMinutes: number = 15;
   private cronJob: cron.ScheduledTask | null = null;
   private screenshotDir: string;
+  private thumbnailDir: string;
   private isActive: boolean = false;
 
   constructor() {
     super();
-    
+
     // 创建截图存储目录
     this.screenshotDir = path.join(os.homedir(), '.learning-supervisor', 'screenshots');
+    this.thumbnailDir = path.join(os.homedir(), '.learning-supervisor', 'thumbnails');
     this.ensureDirectoryExists(this.screenshotDir);
+    this.ensureDirectoryExists(this.thumbnailDir);
   }
 
   /**
@@ -26,9 +29,9 @@ export class ScreenshotService extends EventEmitter {
     if (minutes < 1 || minutes > 60) {
       throw new Error('Screenshot interval must be between 1 and 60 minutes');
     }
-    
+
     this.intervalMinutes = minutes;
-    
+
     // 如果正在运行，重新启动以应用新间隔
     if (this.isActive) {
       this.stop();
@@ -47,7 +50,7 @@ export class ScreenshotService extends EventEmitter {
 
     // 创建cron表达式：每N分钟执行一次
     const cronExpression = `*/${this.intervalMinutes} * * * *`;
-    
+
     this.cronJob = cron.schedule(cronExpression, async () => {
       await this.takeScreenshot();
     }, {
@@ -56,7 +59,7 @@ export class ScreenshotService extends EventEmitter {
 
     this.cronJob.start();
     this.isActive = true;
-    
+
     console.log(`Screenshot service started with ${this.intervalMinutes} minute interval`);
     this.emit('started', this.intervalMinutes);
 
@@ -89,7 +92,7 @@ export class ScreenshotService extends EventEmitter {
   async takeScreenshot(): Promise<string | null> {
     try {
       console.log('Taking screenshot...');
-      
+
       // 生成文件名
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `screenshot-${timestamp}.png`;
@@ -97,13 +100,16 @@ export class ScreenshotService extends EventEmitter {
 
       // 拍摄截图
       const img = await screenshot({ format: 'png' });
-      
+
       // 保存到文件
       await fs.promises.writeFile(filepath, img);
-      
+
+      // 生成缩略图
+      await this.generateThumbnail(filepath);
+
       console.log(`Screenshot saved: ${filepath}`);
       this.emit('screenshot-taken', filepath);
-      
+
       return filepath;
     } catch (error) {
       console.error('Failed to take screenshot:', error);
@@ -124,17 +130,17 @@ export class ScreenshotService extends EventEmitter {
     const now = new Date();
     const nextMinute = Math.ceil(now.getMinutes() / this.intervalMinutes) * this.intervalMinutes;
     const nextTime = new Date(now);
-    
+
     if (nextMinute >= 60) {
       nextTime.setHours(nextTime.getHours() + 1);
       nextTime.setMinutes(nextMinute - 60);
     } else {
       nextTime.setMinutes(nextMinute);
     }
-    
+
     nextTime.setSeconds(0);
     nextTime.setMilliseconds(0);
-    
+
     return nextTime;
   }
 
@@ -148,20 +154,43 @@ export class ScreenshotService extends EventEmitter {
   /**
    * 获取截图历史
    */
-  async getScreenshotHistory(limit: number = 10): Promise<string[]> {
+  async getScreenshotHistory(limit: number = 10): Promise<Array<{
+    filepath: string;
+    filename: string;
+    timestamp: Date;
+    thumbnailPath: string;
+    hasThumbnail: boolean;
+  }>> {
     try {
       const files = await fs.promises.readdir(this.screenshotDir);
-      const screenshots = files
-        .filter(file => file.endsWith('.png'))
-        .map(file => path.join(this.screenshotDir, file))
-        .sort((a, b) => {
-          const statA = fs.statSync(a);
-          const statB = fs.statSync(b);
-          return statB.mtime.getTime() - statA.mtime.getTime();
-        })
+      const screenshots = [];
+
+      for (const file of files) {
+        if (!file.endsWith('.png')) continue;
+
+        const filepath = path.join(this.screenshotDir, file);
+        const stats = await fs.promises.stat(filepath);
+        const thumbnailPath = this.getThumbnailPath(filepath);
+        const hasThumbnail = fs.existsSync(thumbnailPath);
+
+        // 如果没有缩略图，尝试生成一个
+        if (!hasThumbnail) {
+          await this.generateThumbnail(filepath);
+        }
+
+        screenshots.push({
+          filepath,
+          filename: file,
+          timestamp: stats.mtime,
+          thumbnailPath,
+          hasThumbnail: fs.existsSync(thumbnailPath)
+        });
+      }
+
+      // 按时间排序并限制数量
+      return screenshots
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
         .slice(0, limit);
-      
-      return screenshots;
     } catch (error) {
       console.error('Failed to get screenshot history:', error);
       return [];
@@ -175,13 +204,13 @@ export class ScreenshotService extends EventEmitter {
     try {
       const files = await fs.promises.readdir(this.screenshotDir);
       const cutoffTime = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000);
-      
+
       for (const file of files) {
         if (!file.endsWith('.png')) continue;
-        
+
         const filepath = path.join(this.screenshotDir, file);
         const stats = await fs.promises.stat(filepath);
-        
+
         if (stats.mtime.getTime() < cutoffTime) {
           await fs.promises.unlink(filepath);
           console.log(`Deleted old screenshot: ${file}`);
@@ -204,26 +233,26 @@ export class ScreenshotService extends EventEmitter {
     try {
       const files = await fs.promises.readdir(this.screenshotDir);
       const screenshots = files.filter(file => file.endsWith('.png'));
-      
+
       let totalSize = 0;
       let oldestTime: number | null = null;
       let newestTime: number | null = null;
-      
+
       for (const file of screenshots) {
         const filepath = path.join(this.screenshotDir, file);
         const stats = await fs.promises.stat(filepath);
-        
+
         totalSize += stats.size;
-        
+
         if (oldestTime === null || stats.mtime.getTime() < oldestTime) {
           oldestTime = stats.mtime.getTime();
         }
-        
+
         if (newestTime === null || stats.mtime.getTime() > newestTime) {
           newestTime = stats.mtime.getTime();
         }
       }
-      
+
       return {
         totalScreenshots: screenshots.length,
         totalSize,
@@ -239,6 +268,39 @@ export class ScreenshotService extends EventEmitter {
         newestScreenshot: null,
       };
     }
+  }
+
+  /**
+   * 生成缩略图
+   */
+  private async generateThumbnail(imagePath: string): Promise<string | null> {
+    try {
+      const sharp = require('sharp');
+      const filename = path.basename(imagePath, path.extname(imagePath));
+      const thumbnailPath = path.join(this.thumbnailDir, `${filename}_thumb.jpg`);
+
+      await sharp(imagePath)
+        .resize(320, 240, {
+          fit: 'inside',
+          withoutEnlargement: true
+        })
+        .jpeg({ quality: 80 })
+        .toFile(thumbnailPath);
+
+      console.log(`Thumbnail generated: ${thumbnailPath}`);
+      return thumbnailPath;
+    } catch (error) {
+      console.error('Failed to generate thumbnail:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取缩略图路径
+   */
+  getThumbnailPath(imagePath: string): string {
+    const filename = path.basename(imagePath, path.extname(imagePath));
+    return path.join(this.thumbnailDir, `${filename}_thumb.jpg`);
   }
 
   /**
@@ -272,7 +334,7 @@ export class ScreenshotService extends EventEmitter {
     try {
       // 使用screenshot-desktop获取显示器信息
       const displays = await screenshot.listDisplays();
-      
+
       return {
         displays: displays.map((display, index) => ({
           id: display.id || index.toString(),
@@ -303,22 +365,22 @@ export class ScreenshotService extends EventEmitter {
   async takeScreenshotOfDisplay(displayId: string): Promise<string | null> {
     try {
       console.log(`Taking screenshot of display ${displayId}...`);
-      
+
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `screenshot-display-${displayId}-${timestamp}.png`;
       const filepath = path.join(this.screenshotDir, filename);
 
       // 拍摄特定显示器的截图
-      const img = await screenshot({ 
+      const img = await screenshot({
         format: 'png',
         screen: parseInt(displayId) || 0
       });
-      
+
       await fs.promises.writeFile(filepath, img);
-      
+
       console.log(`Display screenshot saved: ${filepath}`);
       this.emit('screenshot-taken', filepath);
-      
+
       return filepath;
     } catch (error) {
       console.error(`Failed to take screenshot of display ${displayId}:`, error);

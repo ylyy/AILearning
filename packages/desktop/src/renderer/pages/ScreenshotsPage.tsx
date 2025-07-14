@@ -91,18 +91,32 @@ const ScreenshotsPage: React.FC = () => {
         const result = await window.electronAPI.screenshots.getHistory(20);
         if (result.success) {
           // 转换真实截图数据为组件需要的格式
-          const realScreenshots: Screenshot[] = result.data.map((filepath: string, index: number) => ({
-            id: `real-${index}`,
-            timestamp: new Date().toISOString(), // 这里应该从文件信息获取
-            filename: filepath.split('/').pop() || 'screenshot.png',
-            path: filepath,
-            thumbnail: `file://${filepath}`, // 使用真实文件路径
-            aiAnalysis: {
-              focusScore: Math.floor(Math.random() * 40) + 60,
-              activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
-              suggestions: [['继续保持专注', '建议适当休息'], ['学习状态良好', '保持当前节奏'], ['注意休息', '适当放松']][Math.floor(Math.random() * 3)]
-            }
-          }));
+          const realScreenshots: Screenshot[] = await Promise.all(
+            result.data.map(async (item: any, index: number) => {
+              let thumbnailUrl = '';
+
+              // 尝试获取缩略图
+              if (item.hasThumbnail) {
+                thumbnailUrl = `file://${item.thumbnailPath}`;
+              } else {
+                // 使用原图作为缩略图
+                thumbnailUrl = `file://${item.filepath}`;
+              }
+
+              return {
+                id: `real-${index}`,
+                timestamp: item.timestamp,
+                filename: item.filename,
+                path: item.filepath,
+                thumbnail: thumbnailUrl,
+                aiAnalysis: {
+                  focusScore: Math.floor(Math.random() * 40) + 60,
+                  activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
+                  suggestions: [['继续保持专注', '建议适当休息'], ['学习状态良好', '保持当前节奏'], ['注意休息', '适当放松']][Math.floor(Math.random() * 3)]
+                }
+              };
+            })
+          );
           setScreenshots(realScreenshots);
           return;
         }
@@ -110,7 +124,18 @@ const ScreenshotsPage: React.FC = () => {
 
       // 如果没有Electron API或获取失败，使用模拟数据
       const mockScreenshots: Screenshot[] = [
-        // ... 保持原有的模拟数据
+        {
+          id: '1',
+          timestamp: new Date().toISOString(),
+          filename: 'screenshot_001.jpg',
+          path: '/screenshots/screenshot_001.jpg',
+          thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNvZGUgRWRpdG9yPC90ZXh0PgogIDxyZWN0IHg9IjIwIiB5PSI0MCIgd2lkdGg9IjI4MCIgaGVpZ2h0PSIxNjAiIGZpbGw9IiMyZDMzNDgiIHJ4PSI0Ii8+CiAgPHRleHQgeD0iMzAiIHk9IjYwIiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjEwIiBmaWxsPSIjZjhmOGYyIj5mdW5jdGlvbiBsZWFybigpIHs8L3RleHQ+CiAgPHRleHQgeD0iNDAiIHk9IjgwIiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjEwIiBmaWxsPSIjZjhmOGYyIj5jb25zb2xlLmxvZygiQUkgTGVhcm5pbmciKTs8L3RleHQ+CiAgPHRleHQgeD0iMzAiIHk9IjEwMCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxMCIgZmlsbD0iI2Y4ZjhmMiI+fTwvdGV4dD4KPC9zdmc+',
+          aiAnalysis: {
+            focusScore: 85,
+            activity: '编程学习',
+            suggestions: ['保持当前专注度', '建议30分钟后休息']
+          }
+        }
       ];
       setScreenshots(mockScreenshots);
     } catch (error) {

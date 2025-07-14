@@ -405,6 +405,20 @@ class LearningSuperviserApp {
     ipcMain.handle('system:showInFolder', async (_, filepath) => {
       shell.showItemInFolder(filepath);
     });
+
+    // 缩略图相关
+    ipcMain.handle('screenshots:getThumbnail', async (_, filepath) => {
+      try {
+        const thumbnailPath = this.screenshotService.getThumbnailPath(filepath);
+        if (require('fs').existsSync(thumbnailPath)) {
+          return { success: true, thumbnailPath };
+        } else {
+          return { success: false, error: 'Thumbnail not found' };
+        }
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
   }
 
   private getAppIcon(): nativeImage {
