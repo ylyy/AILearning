@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
-import { useSettings } from '../contexts/SettingsContext';
 import {
-  CogIcon,
   BellIcon,
   CameraIcon,
-  ClockIcon,
-  ShieldCheckIcon,
-  ComputerDesktopIcon,
+  CogIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
+import { useSettings } from '../contexts/SettingsContext';
 
 const SettingsPage: React.FC = () => {
   const { settings, updateSettings } = useSettings();
@@ -20,8 +18,34 @@ const SettingsPage: React.FC = () => {
     { id: 'privacy', name: '隐私设置', icon: ShieldCheckIcon },
   ];
 
-  const handleSettingChange = (key: string, value: any) => {
-    updateSettings({ [key]: value });
+  const handleSettingChange = async (key: string, value: any) => {
+    try {
+      await updateSettings({ [key]: value });
+      console.log(`设置已更新: ${key} = ${value}`);
+    } catch (error) {
+      console.error('Failed to update setting:', error);
+    }
+  };
+
+  const handleResetSettings = async () => {
+    if (confirm('确定要重置所有设置吗？此操作无法撤销。')) {
+      try {
+        const defaultSettings = {
+          screenshotInterval: 15,
+          autoStart: true,
+          minimizeToTray: true,
+          notifications: true,
+          theme: 'system' as const,
+          language: 'zh-CN' as const,
+          dataRetentionDays: 30,
+          uploadQuality: 'medium' as const,
+        };
+        await updateSettings(defaultSettings);
+        console.log('设置已重置为默认值');
+      } catch (error) {
+        console.error('Failed to reset settings:', error);
+      }
+    }
   };
 
   const SettingItem: React.FC<{
@@ -48,15 +72,13 @@ const SettingsPage: React.FC = () => {
   }> = ({ enabled, onChange }) => (
     <button
       type="button"
-      className={`${
-        enabled ? 'bg-indigo-600' : 'bg-gray-200'
-      } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+      className={`${enabled ? 'bg-indigo-600' : 'bg-gray-200'
+        } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
       onClick={() => onChange(!enabled)}
     >
       <span
-        className={`${
-          enabled ? 'translate-x-5' : 'translate-x-0'
-        } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+        className={`${enabled ? 'translate-x-5' : 'translate-x-0'
+          } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
       />
     </button>
   );
@@ -81,11 +103,10 @@ const SettingsPage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`${
-                    activeTab === tab.id
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                  className={`${activeTab === tab.id
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
                 >
                   <Icon className="h-5 w-5 mr-2" />
                   {tab.name}
@@ -368,13 +389,17 @@ const SettingsPage: React.FC = () => {
       </div>
 
       {/* 保存按钮 */}
-      <div className="flex justify-end">
+      <div className="flex justify-between">
         <button
           type="button"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          onClick={handleResetSettings}
+          className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
         >
-          保存设置
+          重置设置
         </button>
+        <div className="text-sm text-gray-500 flex items-center">
+          设置会自动保存
+        </div>
       </div>
     </div>
   );
