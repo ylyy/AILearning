@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import {
+  AcademicCapIcon,
+  CameraIcon,
+  ChartBarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
-import {
-  ChartBarIcon,
-  CameraIcon,
-  ClockIcon,
-  AcademicCapIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-} from '@heroicons/react/24/outline';
 
 interface DashboardStats {
   todayStudyTime: number;
@@ -31,22 +31,48 @@ const DashboardPage: React.FC = () => {
     lastScreenshot: null,
   });
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [nextScreenshot, setNextScreenshot] = useState<Date | null>(null);
 
   useEffect(() => {
-    // 模拟加载统计数据
-    const loadStats = async () => {
-      // 这里应该从API或本地存储加载真实数据
-      setStats({
-        todayStudyTime: 125, // 分钟
-        weekStudyTime: 680, // 分钟
-        totalScreenshots: 45,
-        aiAnalysisCount: 12,
-        focusScore: 78,
-        lastScreenshot: new Date().toISOString(),
-      });
+    // 加载真实的监控状态和统计数据
+    const loadData = async () => {
+      try {
+        // 检查监控状态
+        if (window.electronAPI) {
+          const status = await window.electronAPI.monitoring.getStatus();
+          setIsMonitoring(status.isRunning);
+          setNextScreenshot(status.nextScreenshot ? new Date(status.nextScreenshot) : null);
+
+          // 获取截图统计
+          const screenshotStats = await window.electronAPI.screenshots.getStatistics();
+          if (screenshotStats.success) {
+            setStats(prev => ({
+              ...prev,
+              totalScreenshots: screenshotStats.data.totalScreenshots,
+              lastScreenshot: screenshotStats.data.newestScreenshot,
+            }));
+          }
+        } else {
+          // Web环境下的模拟数据
+          setStats({
+            todayStudyTime: 125, // 分钟
+            weekStudyTime: 680, // 分钟
+            totalScreenshots: 45,
+            aiAnalysisCount: 12,
+            focusScore: 78,
+            lastScreenshot: new Date().toISOString(),
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      }
     };
 
-    loadStats();
+    loadData();
+
+    // 每30秒更新一次状态
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const formatTime = (minutes: number): string => {
@@ -55,16 +81,59 @@ const DashboardPage: React.FC = () => {
     return `${hours}小时${mins}分钟`;
   };
 
-  const handleStartMonitoring = () => {
-    setIsMonitoring(true);
-    // 这里应该调用Electron主进程开始截图监控
-    console.log('开始学习监控');
+  const handleStartMonitoring = async () => {
+    try {
+      if (window.electronAPI) {
+        await window.electronAPI.monitoring.start();
+        setIsMonitoring(true);
+        // 重新获取状态以更新下次截图时间
+        const status = await window.electronAPI.monitoring.getStatus();
+        setNextScreenshot(status.nextScreenshot ? new Date(status.nextScreenshot) : null);
+        console.log('学习监控已开始');
+      } else {
+        setIsMonitoring(true);
+        console.log('开始学习监控 (模拟模式)');
+      }
+    } catch (error) {
+      console.error('Failed to start monitoring:', error);
+    }
   };
 
-  const handleStopMonitoring = () => {
-    setIsMonitoring(false);
-    // 这里应该调用Electron主进程停止截图监控
-    console.log('停止学习监控');
+  const handleStopMonitoring = async () => {
+    try {
+      if (window.electronAPI) {
+        await window.electronAPI.monitoring.stop();
+        setIsMonitoring(false);
+        setNextScreenshot(null);
+        console.log('学习监控已停止');
+      } else {
+        setIsMonitoring(false);
+        console.log('停止学习监控 (模拟模式)');
+      }
+    } catch (error) {
+      console.error('Failed to stop monitoring:', error);
+    }
+  };
+
+  const handleTakeScreenshot = async () => {
+    try {
+      if (window.electronAPI) {
+        const result = await window.electronAPI.monitoring.takeScreenshot();
+        if (result.success) {
+          // 更新统计数据
+          setStats(prev => ({
+            ...prev,
+            totalScreenshots: prev.totalScreenshots + 1,
+            lastScreenshot: new Date().toISOString(),
+          }));
+          console.log('截图已保存:', result.filepath);
+        }
+      } else {
+        console.log('拍摄截图 (模拟模式)');
+      }
+    } catch (error) {
+      console.error('Failed to take screenshot:', error);
+    }
   };
 
   const StatCard: React.FC<{
@@ -112,6 +181,11 @@ const DashboardPage: React.FC = () => {
             <p className="text-sm text-gray-500">
               {isMonitoring ? '正在监控您的学习状态' : '点击开始监控您的学习活动'}
             </p>
+            {isMonitoring && nextScreenshot && (
+              <p className="text-xs text-blue-600 mt-1">
+                下次截图: {nextScreenshot.toLocaleTimeString()}
+              </p>
+            )}
           </div>
           <div className="flex items-center space-x-4">
             <div className={`flex items-center ${isMonitoring ? 'text-green-600' : 'text-gray-400'}`}>
@@ -120,13 +194,20 @@ const DashboardPage: React.FC = () => {
                 {isMonitoring ? '监控中' : '未监控'}
               </span>
             </div>
+            {isMonitoring && (
+              <button
+                onClick={handleTakeScreenshot}
+                className="px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700"
+              >
+                立即截图
+              </button>
+            )}
             <button
               onClick={isMonitoring ? handleStopMonitoring : handleStartMonitoring}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                isMonitoring
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
-              }`}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${isMonitoring
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
             >
               {isMonitoring ? '停止监控' : '开始监控'}
             </button>

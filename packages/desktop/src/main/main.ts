@@ -1,10 +1,10 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, dialog, shell } from 'electron';
-import { autoUpdater } from 'electron-updater';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray } from 'electron';
 import Store from 'electron-store';
+import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
-import { ScreenshotService } from './services/ScreenshotService';
 import { APIService } from './services/APIService';
 import { NotificationService } from './services/NotificationService';
+import { ScreenshotService } from './services/ScreenshotService';
 
 // 配置存储
 const store = new Store({
@@ -35,7 +35,7 @@ class LearningSuperviserApp {
     this.screenshotService = new ScreenshotService();
     this.apiService = new APIService();
     this.notificationService = new NotificationService();
-    
+
     this.initializeApp();
   }
 
@@ -69,23 +69,23 @@ class LearningSuperviserApp {
   private async onAppReady(): Promise<void> {
     // 创建主窗口
     this.createMainWindow();
-    
+
     // 创建系统托盘
     this.createTray();
-    
+
     // 设置菜单
     this.createMenu();
-    
+
     // 初始化服务
     await this.initializeServices();
-    
+
     // 检查更新
     this.checkForUpdates();
   }
 
   private createMainWindow(): void {
     const bounds = store.get('windowBounds') as any;
-    
+
     this.mainWindow = new BrowserWindow({
       ...bounds,
       minWidth: 800,
@@ -141,7 +141,7 @@ class LearningSuperviserApp {
   private createTray(): void {
     const icon = this.getAppIcon();
     this.tray = new Tray(icon);
-    
+
     const contextMenu = Menu.buildFromTemplate([
       {
         label: '显示主窗口',
@@ -181,7 +181,7 @@ class LearningSuperviserApp {
 
     this.tray.setContextMenu(contextMenu);
     this.tray.setToolTip('Learning Supervisor');
-    
+
     this.tray.on('double-click', () => {
       this.mainWindow?.show();
     });
@@ -282,7 +282,7 @@ class LearningSuperviserApp {
     // 初始化截图服务
     const settings = store.get('settings') as any;
     this.screenshotService.setInterval(settings.screenshotInterval);
-    
+
     // 设置服务事件监听器
     this.screenshotService.on('screenshot-taken', async (screenshotPath: string) => {
       try {
@@ -360,6 +360,34 @@ class LearningSuperviserApp {
       };
     });
 
+    // 截图相关
+    ipcMain.handle('monitoring:takeScreenshot', async () => {
+      try {
+        const filepath = await this.screenshotService.takeScreenshot();
+        return { success: true, filepath };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('screenshots:getHistory', async (_, limit = 10) => {
+      try {
+        const screenshots = await this.screenshotService.getScreenshotHistory(limit);
+        return { success: true, data: screenshots };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('screenshots:getStatistics', async () => {
+      try {
+        const stats = await this.screenshotService.getStatistics();
+        return { success: true, data: stats };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
     // 数据获取
     ipcMain.handle('api:get', async (_, endpoint) => {
       return await this.apiService.get(endpoint);
@@ -368,13 +396,22 @@ class LearningSuperviserApp {
     ipcMain.handle('api:post', async (_, endpoint, data) => {
       return await this.apiService.post(endpoint, data);
     });
+
+    // 系统相关
+    ipcMain.handle('system:openExternal', async (_, url) => {
+      await shell.openExternal(url);
+    });
+
+    ipcMain.handle('system:showInFolder', async (_, filepath) => {
+      shell.showItemInFolder(filepath);
+    });
   }
 
   private getAppIcon(): nativeImage {
-    const iconPath = process.platform === 'darwin' 
+    const iconPath = process.platform === 'darwin'
       ? path.join(__dirname, '../assets/icon.icns')
       : path.join(__dirname, '../assets/icon.png');
-    
+
     return nativeImage.createFromPath(iconPath);
   }
 

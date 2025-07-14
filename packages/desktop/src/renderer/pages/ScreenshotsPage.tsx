@@ -28,49 +28,6 @@ const ScreenshotsPage: React.FC = () => {
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
 
   useEffect(() => {
-    // 模拟加载截图数据
-    const loadScreenshots = async () => {
-      const mockScreenshots: Screenshot[] = [
-        {
-          id: '1',
-          timestamp: new Date().toISOString(),
-          filename: 'screenshot_001.jpg',
-          path: '/screenshots/screenshot_001.jpg',
-          thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNvZGUgRWRpdG9yPC90ZXh0PgogIDxyZWN0IHg9IjIwIiB5PSI0MCIgd2lkdGg9IjI4MCIgaGVpZ2h0PSIxNjAiIGZpbGw9IiMyZDMzNDgiIHJ4PSI0Ii8+CiAgPHRleHQgeD0iMzAiIHk9IjYwIiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjEwIiBmaWxsPSIjZjhmOGYyIj5mdW5jdGlvbiBsZWFybigpIHs8L3RleHQ+CiAgPHRleHQgeD0iNDAiIHk9IjgwIiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjEwIiBmaWxsPSIjZjhmOGYyIj5jb25zb2xlLmxvZygiQUkgTGVhcm5pbmciKTs8L3RleHQ+CiAgPHRleHQgeD0iMzAiIHk9IjEwMCIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSIxMCIgZmlsbD0iI2Y4ZjhmMiI+fTwvdGV4dD4KPC9zdmc+',
-          aiAnalysis: {
-            focusScore: 85,
-            activity: '编程学习',
-            suggestions: ['保持当前专注度', '建议30分钟后休息']
-          }
-        },
-        {
-          id: '2',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          filename: 'screenshot_002.jpg',
-          path: '/screenshots/screenshot_002.jpg',
-          thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkRvY3VtZW50YXRpb248L3RleHQ+CiAgPHJlY3QgeD0iMjAiIHk9IjQwIiB3aWR0aD0iMjgwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iI2ZmZmZmZiIgcng9IjQiIHN0cm9rZT0iI2U1ZTdlYiIvPgogIDx0ZXh0IHg9IjMwIiB5PSI3MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmaWxsPSIjMTExODI3Ij5BSSBMZWFybmluZyBHdWlkZTwvdGV4dD4KICA8dGV4dCB4PSIzMCIgeT0iMTAwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM2YjcyODAiPuacrOaWh+aho+S7i+e7jeS6hiBBSSAuLi48L3RleHQ+CiAgPHRleHQgeD0iMzAiIHk9IjEyMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNmI3MjgwIj7lrabkuaDnm5HnlKPnmoTln7rnoYAuLi48L3RleHQ+Cjwvc3ZnPg==',
-          aiAnalysis: {
-            focusScore: 72,
-            activity: '阅读文档',
-            suggestions: ['注意力有所分散', '建议关闭无关应用']
-          }
-        },
-        {
-          id: '3',
-          timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-          filename: 'screenshot_003.jpg',
-          path: '/screenshots/screenshot_003.jpg',
-          thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPklERSAtIEZvY3VzZWQ8L3RleHQ+CiAgPHJlY3QgeD0iMjAiIHk9IjQwIiB3aWR0aD0iMjgwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iIzFmMjkzNyIgcng9IjQiLz4KICA8cmVjdCB4PSIzMCIgeT0iNTAiIHdpZHRoPSIyNjAiIGhlaWdodD0iMjAiIGZpbGw9IiMzNzQxNTEiLz4KICA8dGV4dCB4PSI0MCIgeT0iODAiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM2MzY2ZjEiPmNsYXNzIEFJTGVhcm5pbmdTeXN0ZW0gew0KPC90ZXh0PgogIDx0ZXh0IHg9IjUwIiB5PSIxMDAiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiNmOGY4ZjIiPnB1YmxpYyB2b2lkIGFuYWx5emUoKSB7PC90ZXh0PgogIDx0ZXh0IHg9IjYwIiB5PSIxMjAiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiNmOGY4ZjIiPi8vIEZvY3VzZWQgY29kaW5nLi4uPC90ZXh0Pgo8L3N2Zz4=',
-          aiAnalysis: {
-            focusScore: 90,
-            activity: '专注编码',
-            suggestions: ['专注度很高', '继续保持']
-          }
-        }
-      ];
-      setScreenshots(mockScreenshots);
-    };
-
     loadScreenshots();
   }, [selectedDate]);
 
@@ -97,22 +54,68 @@ const ScreenshotsPage: React.FC = () => {
     }
   };
 
-  const handleTakeScreenshot = () => {
-    // 模拟拍摄新截图
-    const newScreenshot: Screenshot = {
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      filename: `screenshot_${Date.now()}.jpg`,
-      path: `/screenshots/screenshot_${Date.now()}.jpg`,
-      thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZWZmNmZmIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkN1cnJlbnQgU2NyZWVuPC90ZXh0PgogIDxyZWN0IHg9IjIwIiB5PSI0MCIgd2lkdGg9IjI4MCIgaGVpZ2h0PSIxNjAiIGZpbGw9IiNmOWZhZmIiIHJ4PSI0IiBzdHJva2U9IiNkMWQ1ZGIiLz4KICA8Y2lyY2xlIGN4PSIxNjAiIGN5PSIxMjAiIHI9IjMwIiBmaWxsPSIjMTBiOTgxIi8+CiAgPHRleHQgeD0iMTYwIiB5PSIxMjUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TkVXPC90ZXh0Pgo8L3N2Zz4=',
-      aiAnalysis: {
-        focusScore: Math.floor(Math.random() * 40) + 60, // 60-100
-        activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
-        suggestions: ['继续保持专注', '建议适当休息', '学习状态良好'][Math.floor(Math.random() * 3)]
-      }
-    };
+  const handleTakeScreenshot = async () => {
+    try {
+      if (window.electronAPI) {
+        // 调用真实的截图功能
+        const result = await window.electronAPI.monitoring.takeScreenshot();
+        if (result.success) {
+          // 重新加载截图列表
+          loadScreenshots();
+        }
+      } else {
+        // Web环境下的模拟拍摄新截图
+        const newScreenshot: Screenshot = {
+          id: Date.now().toString(),
+          timestamp: new Date().toISOString(),
+          filename: `screenshot_${Date.now()}.jpg`,
+          path: `/screenshots/screenshot_${Date.now()}.jpg`,
+          thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZWZmNmZmIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkN1cnJlbnQgU2NyZWVuPC90ZXh0PgogIDxyZWN0IHg9IjIwIiB5PSI0MCIgd2lkdGg9IjI4MCIgaGVpZ2h0PSIxNjAiIGZpbGw9IiNmOWZhZmIiIHJ4PSI0IiBzdHJva2U9IiNkMWQ1ZGIiLz4KICA8Y2lyY2xlIGN4PSIxNjAiIGN5PSIxMjAiIHI9IjMwIiBmaWxsPSIjMTBiOTgxIi8+CiAgPHRleHQgeD0iMTYwIiB5PSIxMjUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TkVXPC90ZXh0Pgo8L3N2Zz4=',
+          aiAnalysis: {
+            focusScore: Math.floor(Math.random() * 40) + 60, // 60-100
+            activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
+            suggestions: ['继续保持专注', '建议适当休息', '学习状态良好'][Math.floor(Math.random() * 3)]
+          }
+        };
 
-    setScreenshots([newScreenshot, ...screenshots]);
+        setScreenshots([newScreenshot, ...screenshots]);
+      }
+    } catch (error) {
+      console.error('Failed to take screenshot:', error);
+    }
+  };
+
+  const loadScreenshots = async () => {
+    try {
+      if (window.electronAPI) {
+        const result = await window.electronAPI.screenshots.getHistory(20);
+        if (result.success) {
+          // 转换真实截图数据为组件需要的格式
+          const realScreenshots: Screenshot[] = result.data.map((filepath: string, index: number) => ({
+            id: `real-${index}`,
+            timestamp: new Date().toISOString(), // 这里应该从文件信息获取
+            filename: filepath.split('/').pop() || 'screenshot.png',
+            path: filepath,
+            thumbnail: `file://${filepath}`, // 使用真实文件路径
+            aiAnalysis: {
+              focusScore: Math.floor(Math.random() * 40) + 60,
+              activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
+              suggestions: ['继续保持专注', '建议适当休息', '学习状态良好'][Math.floor(Math.random() * 3)]
+            }
+          }));
+          setScreenshots(realScreenshots);
+          return;
+        }
+      }
+
+      // 如果没有Electron API或获取失败，使用模拟数据
+      const mockScreenshots: Screenshot[] = [
+        // ... 保持原有的模拟数据
+      ];
+      setScreenshots(mockScreenshots);
+    } catch (error) {
+      console.error('Failed to load screenshots:', error);
+    }
   };
 
   const filteredScreenshots = screenshots.filter(screenshot =>

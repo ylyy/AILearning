@@ -23,6 +23,12 @@ interface ElectronAPI {
     takeScreenshot: () => Promise<any>;
   };
 
+  // 截图相关
+  screenshots: {
+    getHistory: (limit?: number) => Promise<any>;
+    getStatistics: () => Promise<any>;
+  };
+
   // API调用
   api: {
     get: (endpoint: string) => Promise<any>;
@@ -69,6 +75,12 @@ const electronAPI: ElectronAPI = {
     stop: () => ipcRenderer.invoke('monitoring:stop'),
     getStatus: () => ipcRenderer.invoke('monitoring:status'),
     takeScreenshot: () => ipcRenderer.invoke('monitoring:takeScreenshot'),
+  },
+
+  // 截图相关
+  screenshots: {
+    getHistory: (limit) => ipcRenderer.invoke('screenshots:getHistory', limit),
+    getStatistics: () => ipcRenderer.invoke('screenshots:getStatistics'),
   },
 
   // API调用
