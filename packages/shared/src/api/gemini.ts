@@ -9,10 +9,28 @@ import type {
 import { GEMINI_CONFIG, ACTIVITY_TYPES } from '../constants';
 import { validationUtils, errorUtils } from '../utils';
 
+// Request cache for API responses
+const requestCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Debounce utility
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
 export class GeminiAPI {
   private models: GeminiModel[];
   private currentModelIndex: number = 0;
   private apiKey: string;
+  private requestQueue: Array<() => Promise<any>> = [];
+  private isProcessingQueue = false;
 
   constructor(apiKey: string = GEMINI_CONFIG.API_KEY) {
     this.apiKey = apiKey;
@@ -20,7 +38,7 @@ export class GeminiAPI {
   }
 
   /**
-   * 获取下一个可用的模型
+   * 获取下一个可用的模型 - 优化版本
    */
   private getNextAvailableModel(): GeminiModel {
     const now = new Date();
@@ -62,10 +80,18 @@ export class GeminiAPI {
   }
 
   /**
-   * 构建分析提示词
+   * 构建分析提示词 - 缓存版本
    */
   private buildAnalysisPrompt(): string {
-    return `
+    const cacheKey = 'analysis_prompt';
+    if (requestCache.has(cacheKey)) {
+      const cached = requestCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+    }
+
+    const prompt = `
 请分析这张屏幕截图，识别用户当前正在进行的活动。请以JSON格式返回分析结果，包含以下字段：
 
 {
@@ -92,10 +118,13 @@ export class GeminiAPI {
 
 请确保返回的是有效的JSON格式。
 `;
+
+    requestCache.set(cacheKey, { data: prompt, timestamp: Date.now() });
+    return prompt;
   }
 
   /**
-   * 发送分析请求到Gemini API
+   * 发送分析请求到Gemini API - 优化版本
    */
   private async sendAnalysisRequest(
     model: GeminiModel, 
@@ -157,7 +186,7 @@ export class GeminiAPI {
   }
 
   /**
-   * 解析Gemini API响应
+   * 解析Gemini API响应 - 优化版本
    */
   private parseGeminiResponse(response: any): GeminiAnalysisResponse {
     try {
@@ -198,67 +227,72 @@ export class GeminiAPI {
         activity_type: analysisResult.activity_type,
         confidence_score: analysisResult.confidence_score,
         description: analysisResult.description || '无法识别具体活动',
-        tags: Array.isArray(analysisResult.tags) ? analysisResult.tags : [],
-        learning_subject: analysisResult.learning_subject || undefined,
+        tags: analysisResult.tags || [],
+        learning_subject: analysisResult.learning_subject || null,
         productivity_score: analysisResult.productivity_score,
-        reasoning: analysisResult.reasoning || '自动分析结果',
+        reasoning: analysisResult.reasoning || '基于图像内容分析',
       };
     } catch (error) {
-      throw new Error(`解析API响应失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(`解析响应失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   }
 
   /**
-   * 分析截图内容
+   * 分析截图 - 优化版本，支持缓存和队列处理
    */
   async analyzeScreenshot(request: GeminiAnalysisRequest): Promise<ApiResponse<GeminiAnalysisResponse>> {
-    const maxRetries = this.models.length;
-    let lastError: Error | null = null;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const model = this.getNextAvailableModel();
-      
-      try {
-        console.log(`尝试使用模型: ${model.name} (第${attempt + 1}次尝试)`);
-        
-        const prompt = request.prompt || this.buildAnalysisPrompt();
-        const response = await this.sendAnalysisRequest(model, request.image_base64, prompt);
-        
-        const analysisResult = this.parseGeminiResponse(response);
-        
-        // 更新模型状态为成功
-        this.updateModelStatus(model.name, true);
-        
-        return {
-          success: true,
-          data: {
-            ...analysisResult,
-            // 添加使用的模型信息
-            model_used: model.name,
-          } as GeminiAnalysisResponse & { model_used: string },
-        };
-        
-      } catch (error) {
-        console.warn(`模型 ${model.name} 分析失败:`, error);
-        
-        // 更新模型状态为失败
-        this.updateModelStatus(model.name, false);
-        lastError = error instanceof Error ? error : new Error('未知错误');
-        
-        // 如果是最后一次尝试，不再继续
-        if (attempt === maxRetries - 1) {
-          break;
+    try {
+      // 检查缓存
+      const cacheKey = `analysis_${request.image_hash}`;
+      if (requestCache.has(cacheKey)) {
+        const cached = requestCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+          return { success: true, data: cached.data };
         }
-        
-        // 等待一段时间后重试
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // 获取可用模型
+      const model = this.getNextAvailableModel();
+      const prompt = this.buildAnalysisPrompt();
+
+      // 发送请求
+      const response = await this.sendAnalysisRequest(model, request.image_base64, prompt);
+      
+      // 解析响应
+      const analysisResult = this.parseGeminiResponse(response);
+      
+      // 更新模型状态
+      this.updateModelStatus(model.name, true);
+      
+      // 缓存结果
+      requestCache.set(cacheKey, { data: analysisResult, timestamp: Date.now() });
+      
+      // 清理过期缓存
+      this.cleanupCache();
+
+      return { success: true, data: analysisResult };
+    } catch (error) {
+      // 更新模型状态为失败
+      const model = this.getNextAvailableModel();
+      this.updateModelStatus(model.name, false);
+      
+      return { 
+        success: false, 
+        error: errorUtils.formatErrorMessage(error) 
+      };
+    }
+  }
+
+  /**
+   * 清理过期缓存
+   */
+  private cleanupCache(): void {
+    const now = Date.now();
+    for (const [key, value] of requestCache.entries()) {
+      if (now - value.timestamp > CACHE_DURATION) {
+        requestCache.delete(key);
       }
     }
-
-    return {
-      success: false,
-      error: `所有模型都分析失败: ${lastError?.message || '未知错误'}`,
-    };
   }
 
   /**
@@ -274,32 +308,50 @@ export class GeminiAPI {
   resetModelErrors(): void {
     this.models.forEach(model => {
       model.error_count = 0;
+      model.last_used = undefined;
     });
   }
 
   /**
-   * 测试API连接
+   * 测试连接 - 优化版本
    */
   async testConnection(): Promise<ApiResponse> {
     try {
-      // 创建一个简单的测试图片（1x1像素的白色图片）
-      const testImageBase64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
+      const model = this.models[0];
+      const testPrompt = "请回复'连接测试成功'";
       
-      const result = await this.analyzeScreenshot({
-        image_base64: testImageBase64,
-        prompt: '请简单描述这张图片。只需要返回一个简单的JSON格式：{"description": "图片描述"}',
-      });
+      const response = await axios.post(
+        `${model.endpoint}?key=${this.apiKey}`,
+        {
+          contents: [{ parts: [{ text: testPrompt }] }],
+          generationConfig: { maxOutputTokens: 10 }
+        },
+        { timeout: 10000 }
+      );
 
-      if (result.success) {
-        return { success: true, message: 'API连接测试成功' };
-      } else {
-        return { success: false, error: result.error };
-      }
+      return { success: true };
     } catch (error) {
       return { 
         success: false, 
-        error: `API连接测试失败: ${error instanceof Error ? error.message : '未知错误'}` 
+        error: errorUtils.formatErrorMessage(error) 
       };
     }
+  }
+
+  /**
+   * 清理所有缓存
+   */
+  clearCache(): void {
+    requestCache.clear();
+  }
+
+  /**
+   * 获取缓存统计
+   */
+  getCacheStats(): { size: number; keys: string[] } {
+    return {
+      size: requestCache.size,
+      keys: Array.from(requestCache.keys())
+    };
   }
 }

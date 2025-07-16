@@ -4,6 +4,8 @@ module.exports = {
     "./index.html",
     "./src/renderer/**/*.{js,ts,jsx,tsx}",
   ],
+  // Enable JIT mode for faster builds and smaller CSS
+  mode: 'jit',
   theme: {
     extend: {
       colors: {
@@ -116,4 +118,10 @@ module.exports = {
     require('@tailwindcss/typography'),
   ],
   darkMode: 'class',
+  // Optimize for production
+  corePlugins: {
+    // Disable unused features for smaller CSS
+    preflight: true,
+    container: false,
+  },
 };

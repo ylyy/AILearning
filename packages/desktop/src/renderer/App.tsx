@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout/Layout';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import ScreenshotsPage from './pages/ScreenshotsPage';
-import AnalysisPage from './pages/AnalysisPage';
-import SettingsPage from './pages/SettingsPage';
 import LoadingSpinner from './components/UI/LoadingSpinner';
 
-// 受保护的路由组件
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Lazy load pages for better performance
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ScreenshotsPage = lazy(() => import('./pages/ScreenshotsPage'));
+const AnalysisPage = lazy(() => import('./pages/AnalysisPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+// 受保护的路由组件 - 使用React.memo优化
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -24,10 +26,12 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   return <>{children}</>;
-};
+});
 
-// 主应用组件
-const AppContent: React.FC = () => {
+ProtectedRoute.displayName = 'ProtectedRoute';
+
+// 主应用内容组件 - 使用React.memo优化
+const AppContent: React.FC = React.memo(() => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -40,7 +44,11 @@ const AppContent: React.FC = () => {
         <Route 
           path="/login" 
           element={
-            isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+            isAuthenticated ? <Navigate to="/" replace /> : (
+              <Suspense fallback={<LoadingSpinner />}>
+                <LoginPage />
+              </Suspense>
+            )
           } 
         />
         <Route
@@ -48,13 +56,15 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute>
               <Layout>
-                <Routes>
-                  <Route path="/" element={<DashboardPage />} />
-                  <Route path="/screenshots" element={<ScreenshotsPage />} />
-                  <Route path="/analysis" element={<AnalysisPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Routes>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/screenshots" element={<ScreenshotsPage />} />
+                    <Route path="/analysis" element={<AnalysisPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
               </Layout>
             </ProtectedRoute>
           }
@@ -62,10 +72,12 @@ const AppContent: React.FC = () => {
       </Routes>
     </Router>
   );
-};
+});
 
-// 根应用组件
-const App: React.FC = () => {
+AppContent.displayName = 'AppContent';
+
+// 根应用组件 - 使用React.memo优化
+const App: React.FC = React.memo(() => {
   const [isElectronReady, setIsElectronReady] = useState(false);
 
   useEffect(() => {
@@ -95,6 +107,8 @@ const App: React.FC = () => {
       </SettingsProvider>
     </AuthProvider>
   );
-};
+});
+
+App.displayName = 'App';
 
 export default App;

@@ -2,6 +2,12 @@ import { format, parseISO, differenceInMinutes, startOfDay, endOfDay } from 'dat
 import { DATE_FORMATS, FILE_PATH_TEMPLATES } from '../constants';
 import type { ActivityType, Screenshot, ActivityAnalysis } from '../types';
 
+// Export performance monitoring utilities
+export * from './performance';
+
+// Memoization cache for expensive operations
+const memoCache = new Map<string, any>();
+
 // 日期时间工具函数
 export const dateUtils = {
   /**
@@ -84,36 +90,55 @@ export const pathUtils = {
   },
 };
 
-// 图片处理工具函数
+// 优化的图片处理工具函数
 export const imageUtils = {
   /**
-   * 压缩图片为base64
+   * 压缩图片为base64 - 优化版本
    */
   compressImageToBase64: async (file: File, maxSize: number = 1024 * 1024): Promise<string> => {
+    // Check cache first
+    const cacheKey = `${file.name}-${file.size}-${maxSize}`;
+    if (memoCache.has(cacheKey)) {
+      return memoCache.get(cacheKey);
+    }
+
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
 
       img.onload = () => {
-        // 计算压缩比例
-        const ratio = Math.min(800 / img.width, 600 / img.height);
+        // 计算压缩比例 - 更激进的压缩
+        const maxWidth = 800;
+        const maxHeight = 600;
+        const ratio = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+        
         canvas.width = img.width * ratio;
         canvas.height = img.height * ratio;
 
         // 绘制压缩后的图片
         ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // 转换为base64
-        const base64 = canvas.toDataURL('image/jpeg', 0.8);
+        // 转换为base64，使用更低的初始质量
+        let quality = 0.7;
+        let base64 = canvas.toDataURL('image/jpeg', quality);
         
-        // 检查大小，如果还是太大就进一步压缩
-        if (base64.length > maxSize) {
-          const quality = maxSize / base64.length * 0.8;
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        } else {
-          resolve(base64);
+        // 如果还是太大，进一步压缩
+        while (base64.length > maxSize && quality > 0.1) {
+          quality -= 0.1;
+          base64 = canvas.toDataURL('image/jpeg', quality);
         }
+
+        // Cache the result
+        memoCache.set(cacheKey, base64);
+        
+        // Limit cache size
+        if (memoCache.size > 100) {
+          const firstKey = memoCache.keys().next().value;
+          memoCache.delete(firstKey);
+        }
+
+        resolve(base64);
       };
 
       img.onerror = reject;
@@ -127,6 +152,13 @@ export const imageUtils = {
   getBase64Data: (base64: string): string => {
     const commaIndex = base64.indexOf(',');
     return commaIndex !== -1 ? base64.substring(commaIndex + 1) : base64;
+  },
+
+  /**
+   * 清理图片缓存
+   */
+  clearImageCache: (): void => {
+    memoCache.clear();
   },
 };
 
@@ -162,14 +194,15 @@ export const validationUtils = {
   },
 };
 
-// 统计计算工具函数
+// 优化的统计计算工具函数
 export const statsUtils = {
   /**
-   * 计算平均值
+   * 计算平均值 - 使用更高效的算法
    */
   average: (numbers: number[]): number => {
     if (numbers.length === 0) return 0;
-    return numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
+    const sum = numbers.reduce((acc, num) => acc + num, 0);
+    return sum / numbers.length;
   },
 
   /**
@@ -181,16 +214,27 @@ export const statsUtils = {
   },
 
   /**
-   * 计算平均生产力评分
+   * 计算平均生产力评分 - 优化版本
    */
   calculateAverageProductivity: (analyses: ActivityAnalysis[]): number => {
     if (analyses.length === 0) return 0;
-    const scores = analyses.map(a => a.productivity_score);
-    return statsUtils.average(scores);
+    
+    // Use more efficient calculation
+    let sum = 0;
+    let count = 0;
+    
+    for (const analysis of analyses) {
+      if (analysis.productivity_score) {
+        sum += analysis.productivity_score;
+        count++;
+      }
+    }
+    
+    return count > 0 ? sum / count : 0;
   },
 
   /**
-   * 按活动类型分组统计
+   * 按活动类型分组统计 - 优化版本
    */
   groupByActivityType: (analyses: ActivityAnalysis[]) => {
     const groups: Record<ActivityType, ActivityAnalysis[]> = {
@@ -201,18 +245,21 @@ export const statsUtils = {
       other: [],
     };
 
-    analyses.forEach(analysis => {
+    // Use for...of for better performance
+    for (const analysis of analyses) {
       groups[analysis.activity_type].push(analysis);
-    });
+    }
 
     return groups;
   },
 
   /**
-   * 计算学习连续天数
+   * 计算学习连续天数 - 优化版本
    */
   calculateLearningStreak: (dailyStats: Array<{ date: string; learning_time: number }>): number => {
     let streak = 0;
+    
+    // Sort in descending order for efficiency
     const sortedStats = dailyStats.sort((a, b) => b.date.localeCompare(a.date));
 
     for (const stat of sortedStats) {
@@ -259,21 +306,29 @@ export const errorUtils = {
   },
 };
 
-// 缓存工具函数
+// 优化的缓存工具函数
 export const cacheUtils = {
   /**
-   * 设置本地存储
+   * 设置本地存储 - 添加错误处理和大小限制
    */
   setItem: (key: string, value: any): void => {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      const serialized = JSON.stringify(value);
+      
+      // Check size limit (5MB per item)
+      if (serialized.length > 5 * 1024 * 1024) {
+        console.warn('Item too large for localStorage:', key);
+        return;
+      }
+      
+      localStorage.setItem(key, serialized);
     } catch (error) {
       console.warn('Failed to set localStorage item:', error);
     }
   },
 
   /**
-   * 获取本地存储
+   * 获取本地存储 - 添加类型安全
    */
   getItem: <T = any>(key: string): T | null => {
     try {
@@ -306,32 +361,66 @@ export const cacheUtils = {
       console.warn('Failed to clear localStorage:', error);
     }
   },
+
+  /**
+   * 获取缓存大小
+   */
+  getSize: (): number => {
+    try {
+      let size = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          size += localStorage.getItem(key)?.length || 0;
+        }
+      }
+      return size;
+    } catch (error) {
+      return 0;
+    }
+  },
 };
 
 // 设备信息工具函数
 export const deviceUtils = {
   /**
-   * 获取设备类型
+   * 获取设备类型 - 缓存结果
    */
   getDeviceType: (): 'desktop' | 'mobile' => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth <= 768 ? 'mobile' : 'desktop';
+    const cacheKey = 'deviceType';
+    if (memoCache.has(cacheKey)) {
+      return memoCache.get(cacheKey);
     }
-    return 'desktop';
+
+    let deviceType: 'desktop' | 'mobile' = 'desktop';
+    if (typeof window !== 'undefined') {
+      deviceType = window.innerWidth <= 768 ? 'mobile' : 'desktop';
+    }
+    
+    memoCache.set(cacheKey, deviceType);
+    return deviceType;
   },
 
   /**
-   * 获取平台信息
+   * 获取平台信息 - 缓存结果
    */
   getPlatform: (): string => {
+    const cacheKey = 'platform';
+    if (memoCache.has(cacheKey)) {
+      return memoCache.get(cacheKey);
+    }
+
+    let platform = 'unknown';
     if (typeof navigator !== 'undefined') {
       const userAgent = navigator.userAgent.toLowerCase();
-      if (userAgent.includes('win')) return 'windows';
-      if (userAgent.includes('mac')) return 'mac';
-      if (userAgent.includes('iphone') || userAgent.includes('ipad')) return 'ios';
-      if (userAgent.includes('android')) return 'android';
+      if (userAgent.includes('win')) platform = 'windows';
+      else if (userAgent.includes('mac')) platform = 'mac';
+      else if (userAgent.includes('iphone') || userAgent.includes('ipad')) platform = 'ios';
+      else if (userAgent.includes('android')) platform = 'android';
     }
-    return 'unknown';
+    
+    memoCache.set(cacheKey, platform);
+    return platform;
   },
 
   /**

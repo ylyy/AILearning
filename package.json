@@ -29,7 +29,13 @@
     "setup:shared": "cd packages/shared && npm install",
     "setup:desktop": "cd packages/desktop && npm install",
     "setup:mobile": "cd packages/mobile && npm install",
-    "setup:backend": "cd packages/backend && npm install"
+    "setup:backend": "cd packages/backend && npm install",
+    "analyze": "node scripts/analyze-bundle.js",
+    "analyze:desktop": "cd packages/desktop && npm run build && node ../../scripts/analyze-bundle.js desktop",
+    "analyze:mobile": "cd packages/mobile && npm run build && node ../../scripts/analyze-bundle.js mobile",
+    "optimize": "npm run analyze && npm run lint:fix",
+    "performance:report": "node -e \"const { performanceMonitor } = require('./packages/shared/src/utils/performance'); console.log(JSON.stringify(performanceMonitor.generateReport(), null, 2));\"",
+    "performance:clear": "node -e \"const { performanceMonitor } = require('./packages/shared/src/utils/performance'); performanceMonitor.clearMetrics(); console.log('Performance metrics cleared');\""
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.0.0",

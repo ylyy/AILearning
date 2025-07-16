@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 
 interface User {
   id: string;
@@ -33,14 +33,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!user;
+  // Memoize isAuthenticated to prevent unnecessary re-renders
+  const isAuthenticated = useMemo(() => !!user, [user]);
 
-  // 初始化时检查用户状态
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
+  // Memoize checkAuthStatus function
+  const checkAuthStatus = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -56,9 +53,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const login = async (credentials: { email: string; password: string }) => {
+  // 初始化时检查用户状态
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  // Memoize login function
+  const login = useCallback(async (credentials: { email: string; password: string }) => {
     try {
       setIsLoading(true);
       
@@ -80,9 +83,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  // Memoize logout function
+  const logout = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -96,9 +100,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  // Memoize refreshUser function
+  const refreshUser = useCallback(async () => {
     try {
       if (window.electronAPI) {
         const result = await window.electronAPI.auth.getUser();
@@ -109,16 +114,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Failed to refresh user:', error);
     }
-  };
+  }, []);
 
-  const value: AuthContextType = {
+  // Memoize context value to prevent unnecessary re-renders
+  const value: AuthContextType = useMemo(() => ({
     user,
     isAuthenticated,
     isLoading,
     login,
     logout,
     refreshUser,
-  };
+  }), [user, isAuthenticated, isLoading, login, logout, refreshUser]);
 
   return (
     <AuthContext.Provider value={value}>
