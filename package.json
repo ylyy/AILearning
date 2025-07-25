@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:shared\" \"npm run dev:desktop\" \"npm run dev:mobile\"",
+    "dev:desktop-only": "concurrently \"npm run dev:shared\" \"npm run dev:desktop\"",
     "dev:shared": "cd packages/shared && npm run dev",
     "dev:desktop": "cd packages/desktop && npm run dev",
     "dev:mobile": "cd packages/mobile && npm run dev",

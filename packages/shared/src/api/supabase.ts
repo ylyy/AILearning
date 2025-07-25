@@ -1,15 +1,14 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { 
-  User, 
-  Device, 
-  Screenshot, 
-  ActivityAnalysis, 
-  LearningSession,
-  DailyStats,
-  Notification,
-  ApiResponse 
-} from '../types';
 import { DB_TABLES, STORAGE_BUCKETS } from '../constants';
+import type {
+  ActivityAnalysis,
+  ApiResponse,
+  Device,
+  LearningSession,
+  Notification,
+  Screenshot,
+  User
+} from '../types';
 
 export class SupabaseAPI {
   private client: SupabaseClient;
@@ -30,7 +29,25 @@ export class SupabaseAPI {
         return { success: false, error: error.message };
       }
 
-      return { success: true, data: data.user as User };
+      // 转换 Supabase User 到我们的 User 类型
+      if (!data.user) {
+        return { success: false, error: '用户数据为空' };
+      }
+
+      const user: User = {
+        id: data.user.id,
+        email: data.user.email || '',
+        created_at: data.user.created_at,
+        updated_at: data.user.updated_at || data.user.created_at,
+        settings: {
+          screenshot_interval: 5,
+          auto_analysis: true,
+          notifications_enabled: true,
+          learning_goals: [],
+          privacy_mode: false
+        }
+      };
+      return { success: true, data: user };
     } catch (error) {
       return { success: false, error: '注册失败' };
     }
@@ -47,7 +64,25 @@ export class SupabaseAPI {
         return { success: false, error: error.message };
       }
 
-      return { success: true, data: data.user as User };
+      // 转换 Supabase User 到我们的 User 类型
+      if (!data.user) {
+        return { success: false, error: '用户数据为空' };
+      }
+
+      const user: User = {
+        id: data.user.id,
+        email: data.user.email || '',
+        created_at: data.user.created_at,
+        updated_at: data.user.updated_at || data.user.created_at,
+        settings: {
+          screenshot_interval: 5,
+          auto_analysis: true,
+          notifications_enabled: true,
+          learning_goals: [],
+          privacy_mode: false
+        }
+      };
+      return { success: true, data: user };
     } catch (error) {
       return { success: false, error: '登录失败' };
     }
@@ -56,7 +91,7 @@ export class SupabaseAPI {
   async signOut(): Promise<ApiResponse> {
     try {
       const { error } = await this.client.auth.signOut();
-      
+
       if (error) {
         return { success: false, error: error.message };
       }
@@ -181,7 +216,7 @@ export class SupabaseAPI {
   }
 
   async updateScreenshotAnalysisStatus(
-    screenshotId: string, 
+    screenshotId: string,
     status: Screenshot['analysis_status']
   ): Promise<ApiResponse> {
     try {
@@ -220,8 +255,8 @@ export class SupabaseAPI {
   }
 
   async getActivityAnalyses(
-    userId: string, 
-    startDate?: string, 
+    userId: string,
+    startDate?: string,
     endDate?: string
   ): Promise<ApiResponse<ActivityAnalysis[]>> {
     try {
@@ -274,7 +309,7 @@ export class SupabaseAPI {
   }
 
   async updateLearningSession(
-    sessionId: string, 
+    sessionId: string,
     updates: Partial<LearningSession>
   ): Promise<ApiResponse<LearningSession>> {
     try {

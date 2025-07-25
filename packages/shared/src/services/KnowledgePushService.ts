@@ -1,5 +1,5 @@
-import { LearningGoal, ActivityAnalysis, KnowledgeItem } from '../types';
-import { GeminiAPI } from './GeminiAPI';
+import { GeminiAPI } from '../api/gemini';
+import { ActivityAnalysis, LearningGoal } from '../types';
 
 export interface KnowledgePushConfig {
   frequency: 'daily' | 'weekly' | 'bi-weekly';
@@ -41,7 +41,7 @@ export class KnowledgePushService {
     try {
       // 分析用户学习模式
       const learningPattern = this.analyzeLearningPattern(recentAnalyses);
-      
+
       // 为每个目标生成内容
       const contentPromises = goals
         .filter(goal => goal.is_active)
@@ -69,35 +69,35 @@ export class KnowledgePushService {
     contentTypePreference: string[];
   } {
     const learningAnalyses = analyses.filter(a => a.activity_type === 'learning');
-    
+
     // 偏好科目
     const subjectCounts: Record<string, number> = {};
     learningAnalyses.forEach(analysis => {
       if (analysis.learning_subject) {
-        subjectCounts[analysis.learning_subject] = 
+        subjectCounts[analysis.learning_subject] =
           (subjectCounts[analysis.learning_subject] || 0) + 1;
       }
     });
 
     const preferredSubjects = Object.entries(subjectCounts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([subject]) => subject);
 
     // 学习时间偏好
-    const learningTimes = learningAnalyses.map(a => 
+    const learningTimes = learningAnalyses.map(a =>
       new Date(a.analysis_time).getHours()
     );
 
     // 平均学习会话长度
-    const averageSessionLength = learningAnalyses.length > 0 
+    const averageSessionLength = learningAnalyses.length > 0
       ? learningAnalyses.length * 15 / this.countLearningSessions(learningAnalyses)
       : 30;
 
     // 难度偏好（基于生产力评分）
     const avgProductivity = learningAnalyses.reduce((sum, a) => sum + a.productivity_score, 0) / learningAnalyses.length;
-    const difficultyPreference = avgProductivity > 8 ? 'advanced' : 
-                                avgProductivity > 6 ? 'intermediate' : 'beginner';
+    const difficultyPreference = avgProductivity > 8 ? 'advanced' :
+      avgProductivity > 6 ? 'intermediate' : 'beginner';
 
     return {
       preferredSubjects,
@@ -118,18 +118,11 @@ export class KnowledgePushService {
   ): Promise<PersonalizedContent[]> {
     try {
       const prompt = this.buildContentGenerationPrompt(goal, pattern, config);
-      
-      const response = await this.geminiAPI.generateText({
-        prompt,
-        maxTokens: 2000,
-        temperature: 0.7,
-      });
 
-      if (!response.success || !response.data) {
-        return [];
-      }
-
-      return this.parseGeneratedContent(response.data.text, goal);
+      // 由于 GeminiAPI 主要用于截图分析，这里暂时返回空数组
+      // TODO: 实现专门的文本生成 API
+      console.warn('Text generation not implemented yet');
+      return [];
     } catch (error) {
       console.error(`Failed to generate content for goal ${goal.id}:`, error);
       return [];
@@ -193,7 +186,7 @@ export class KnowledgePushService {
   ): PersonalizedContent[] {
     try {
       const parsed = JSON.parse(generatedText);
-      
+
       if (!parsed.recommendations || !Array.isArray(parsed.recommendations)) {
         return [];
       }
@@ -264,11 +257,11 @@ export class KnowledgePushService {
     for (let i = 1; i < analyses.length; i++) {
       const currentTime = new Date(analyses[i].analysis_time);
       const timeDiff = currentTime.getTime() - lastTime.getTime();
-      
+
       if (timeDiff > 30 * 60 * 1000) { // 30分钟间隔
         sessions++;
       }
-      
+
       lastTime = currentTime;
     }
 
@@ -292,21 +285,21 @@ export class KnowledgePushService {
             await this.sendAppNotification(content, userId);
             results.push({ channel, success: true });
             break;
-          
+
           case 'wechat':
             await this.sendWeChatNotification(content, userId);
             results.push({ channel, success: true });
             break;
-          
+
           case 'email':
             await this.sendEmailNotification(content, userId);
             results.push({ channel, success: true });
             break;
         }
       } catch (error) {
-        results.push({ 
-          channel, 
-          success: false, 
+        results.push({
+          channel,
+          success: false,
           error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
@@ -382,17 +375,13 @@ export class KnowledgePushService {
 以JSON格式返回。
 `;
 
-      const response = await this.geminiAPI.generateText({
-        prompt,
-        maxTokens: 3000,
-        temperature: 0.7,
-      });
-
-      if (!response.success || !response.data) {
-        throw new Error('Failed to generate learning path');
-      }
-
-      return JSON.parse(response.data.text);
+      // 由于 GeminiAPI 主要用于截图分析，这里暂时返回默认路径
+      // TODO: 实现专门的文本生成 API
+      console.warn('Learning path generation not implemented yet');
+      return {
+        path: [],
+        totalEstimatedTime: 0,
+      };
     } catch (error) {
       console.error('Failed to generate learning path:', error);
       return {

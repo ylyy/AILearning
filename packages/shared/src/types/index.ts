@@ -18,6 +18,7 @@ export interface UserSettings {
 export interface LearningGoal {
   id: string;
   title: string;
+  description: string;
   target_hours_per_day: number;
   subjects: string[];
   created_at: string;
@@ -188,4 +189,16 @@ export interface AppConfig {
     version: string;
     environment: 'development' | 'production';
   };
+}
+
+// 知识推送相关类型
+export interface KnowledgeItem {
+  id: string;
+  title: string;
+  content: string;
+  type: 'concept' | 'example' | 'exercise' | 'tip';
+  subject: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  tags: string[];
+  created_at: string;
 }
