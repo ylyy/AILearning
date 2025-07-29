@@ -1,337 +1,175 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { APIClient } from '@learning-supervisor/shared';
+import { app } from 'electron';
+import FormData from 'form-data';
+import fetch from 'node-fetch';
+
+interface AnalysisResult {
+  id: string;
+  activity_type: string;
+  confidence_score: number;
+  description: string;
+  tags: string[];
+  learning_subject?: string;
+  productivity_score: number;
+  reasoning: string;
+}
 
 export class APIService {
-  private apiClient: APIClient | null = null;
-  private authToken: string | null = null;
   private baseURL: string;
+  private authToken: string | null = null;
 
   constructor() {
-    this.baseURL = process.env.API_BASE_URL || 'http://localhost:3001/api';
+    // 从环境变量或配置文件读取API地址
+    this.baseURL = process.env.API_BASE_URL || 'http://localhost:3000/api';
   }
 
   /**
    * 设置认证令牌
    */
-  setAuthToken(token: string): void {
+  setAuthToken(token: string | null): void {
     this.authToken = token;
-    // 这里可以初始化API客户端
-    // this.apiClient = new APIClient(config);
   }
 
   /**
-   * 用户登录
+   * 上传截图并获取AI分析结果
    */
-  async login(credentials: { email: string; password: string }): Promise<any> {
+  async uploadScreenshotAndAnalyze(screenshotPath: string): Promise<AnalysisResult | null> {
     try {
-      const response = await fetch(`${this.baseURL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        this.setAuthToken(result.data.token);
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw new Error('网络连接失败，请检查网络设置');
-    }
-  }
-
-  /**
-   * 用户登出
-   */
-  async logout(): Promise<void> {
-    try {
-      if (this.authToken) {
-        await fetch(`${this.baseURL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.authToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Logout failed:', error);
-    } finally {
-      this.authToken = null;
-      this.apiClient = null;
-    }
-  }
-
-  /**
-   * 注册设备
-   */
-  async registerDevice(deviceInfo: {
-    device_name: string;
-    device_type: 'desktop' | 'mobile';
-    platform: string;
-  }): Promise<any> {
-    return this.post('/devices/register', deviceInfo);
-  }
-
-  /**
-   * 上传截图
-   */
-  async uploadScreenshot(screenshotPath: string): Promise<any> {
-    try {
-      if (!this.authToken) {
-        throw new Error('未登录，无法上传截图');
-      }
-
+      // 检查文件是否存在
       if (!fs.existsSync(screenshotPath)) {
-        throw new Error('截图文件不存在');
+        throw new Error('Screenshot file not found');
       }
 
       // 读取截图文件
-      const fileBuffer = await fs.promises.readFile(screenshotPath);
-      const fileName = path.basename(screenshotPath);
-      
-      // 创建FormData
-      const formData = new FormData();
-      const blob = new Blob([fileBuffer], { type: 'image/png' });
-      formData.append('screenshot', blob, fileName);
-      formData.append('captured_at', new Date().toISOString());
-      
-      // 获取设备ID（这里需要从本地存储获取或创建）
-      const deviceId = await this.getOrCreateDeviceId();
-      formData.append('device_id', deviceId);
+      const imageBuffer = fs.readFileSync(screenshotPath);
+      const base64Image = imageBuffer.toString('base64');
 
-      const response = await fetch(`${this.baseURL}/screenshots/upload`, {
+      // 1. 先上传截图到后端
+      const formData = new FormData();
+      formData.append('screenshot', imageBuffer, {
+        filename: path.basename(screenshotPath),
+        contentType: 'image/png',
+      });
+
+      const uploadResponse = await fetch(`${this.baseURL}/screenshots/upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.authToken}`,
+          ...(this.authToken && { Authorization: `Bearer ${this.authToken}` }),
         },
         body: formData,
       });
 
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.error || '上传失败');
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.statusText}`);
       }
 
-      console.log('Screenshot uploaded successfully:', result.data.id);
-      return result;
-    } catch (error) {
-      console.error('Failed to upload screenshot:', error);
-      throw error;
-    }
-  }
+      const uploadResult = await uploadResponse.json();
+      const screenshotId = uploadResult.data?.id;
 
-  /**
-   * 获取或创建设备ID
-   */
-  private async getOrCreateDeviceId(): Promise<string> {
-    // 从本地存储获取设备ID
-    const Store = require('electron-store');
-    const store = new Store();
-    
-    let deviceId = store.get('deviceId');
-    
-    if (!deviceId) {
-      // 创建新设备
-      const os = require('os');
-      const deviceInfo = {
-        device_name: `${os.hostname()}-${os.platform()}`,
-        device_type: 'desktop' as const,
-        platform: this.getPlatform(),
-      };
-      
-      const result = await this.registerDevice(deviceInfo);
-      if (result.success) {
-        deviceId = result.data.id;
-        store.set('deviceId', deviceId);
-      } else {
-        throw new Error('设备注册失败');
-      }
-    }
-    
-    return deviceId;
-  }
-
-  /**
-   * 获取平台信息
-   */
-  private getPlatform(): string {
-    const platform = process.platform;
-    switch (platform) {
-      case 'win32':
-        return 'windows';
-      case 'darwin':
-        return 'mac';
-      case 'linux':
-        return 'linux';
-      default:
-        return 'unknown';
-    }
-  }
-
-  /**
-   * 发送心跳
-   */
-  async sendHeartbeat(): Promise<void> {
-    try {
-      const deviceId = await this.getOrCreateDeviceId();
-      await this.put(`/devices/${deviceId}/heartbeat`, {});
-    } catch (error) {
-      console.error('Failed to send heartbeat:', error);
-    }
-  }
-
-  /**
-   * 获取用户统计数据
-   */
-  async getStats(period: 'today' | 'week' | 'month' = 'today'): Promise<any> {
-    return this.get(`/stats/${period}`);
-  }
-
-  /**
-   * 获取截图列表
-   */
-  async getScreenshots(params: {
-    page?: number;
-    limit?: number;
-    start_date?: string;
-    end_date?: string;
-  } = {}): Promise<any> {
-    const queryString = new URLSearchParams(params as any).toString();
-    return this.get(`/screenshots?${queryString}`);
-  }
-
-  /**
-   * 获取活动分析
-   */
-  async getAnalyses(params: {
-    page?: number;
-    limit?: number;
-    activity_type?: string;
-    start_date?: string;
-    end_date?: string;
-  } = {}): Promise<any> {
-    const queryString = new URLSearchParams(params as any).toString();
-    return this.get(`/analysis?${queryString}`);
-  }
-
-  /**
-   * 获取通知
-   */
-  async getNotifications(params: {
-    page?: number;
-    limit?: number;
-    unread_only?: boolean;
-  } = {}): Promise<any> {
-    const queryString = new URLSearchParams(params as any).toString();
-    return this.get(`/notifications?${queryString}`);
-  }
-
-  /**
-   * 标记通知为已读
-   */
-  async markNotificationAsRead(notificationId: string): Promise<any> {
-    return this.put(`/notifications/${notificationId}/read`, {});
-  }
-
-  /**
-   * 通用GET请求
-   */
-  async get(endpoint: string): Promise<any> {
-    return this.request('GET', endpoint);
-  }
-
-  /**
-   * 通用POST请求
-   */
-  async post(endpoint: string, data: any): Promise<any> {
-    return this.request('POST', endpoint, data);
-  }
-
-  /**
-   * 通用PUT请求
-   */
-  async put(endpoint: string, data: any): Promise<any> {
-    return this.request('PUT', endpoint, data);
-  }
-
-  /**
-   * 通用DELETE请求
-   */
-  async delete(endpoint: string): Promise<any> {
-    return this.request('DELETE', endpoint);
-  }
-
-  /**
-   * 通用请求方法
-   */
-  private async request(method: string, endpoint: string, data?: any): Promise<any> {
-    try {
-      if (!this.authToken) {
-        throw new Error('未登录，请先登录');
+      if (!screenshotId) {
+        throw new Error('No screenshot ID returned from upload');
       }
 
-      const url = `${this.baseURL}${endpoint}`;
-      const options: RequestInit = {
-        method,
+      // 2. 触发AI分析
+      const analyzeResponse = await fetch(`${this.baseURL}/screenshots/${screenshotId}/analyze`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.authToken}`,
           'Content-Type': 'application/json',
+          ...(this.authToken && { Authorization: `Bearer ${this.authToken}` }),
         },
-      };
+        body: JSON.stringify({
+          image_base64: base64Image,
+          screenshot_id: screenshotId,
+        }),
+      });
 
-      if (data && (method === 'POST' || method === 'PUT')) {
-        options.body = JSON.stringify(data);
+      if (!analyzeResponse.ok) {
+        throw new Error(`Analysis failed: ${analyzeResponse.statusText}`);
       }
 
-      const response = await fetch(url, options);
-      const result = await response.json();
+      const analysisResult = await analyzeResponse.json();
+      
+      // 3. 等待分析完成并获取结果
+      return await this.waitForAnalysisResult(screenshotId);
+    } catch (error) {
+      console.error('Failed to upload and analyze screenshot:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 等待AI分析完成并获取结果
+   */
+  private async waitForAnalysisResult(screenshotId: string, maxAttempts = 10): Promise<AnalysisResult | null> {
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        const response = await fetch(`${this.baseURL}/analysis/screenshot/${screenshotId}`, {
+          headers: {
+            ...(this.authToken && { Authorization: `Bearer ${this.authToken}` }),
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.data && result.data.status === 'completed') {
+            return result.data;
+          }
+        }
+
+        // 等待2秒后重试
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (error) {
+        console.error('Error checking analysis result:', error);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 获取历史分析记录
+   */
+  async getAnalysisHistory(limit = 20): Promise<AnalysisResult[]> {
+    try {
+      const response = await fetch(`${this.baseURL}/analysis?limit=${limit}`, {
+        headers: {
+          ...(this.authToken && { Authorization: `Bearer ${this.authToken}` }),
+        },
+      });
 
       if (!response.ok) {
-        throw new Error(result.error || `HTTP ${response.status}`);
+        throw new Error(`Failed to get analysis history: ${response.statusText}`);
       }
 
-      return result;
+      const result = await response.json();
+      return result.data || [];
     } catch (error) {
-      console.error(`API request failed (${method} ${endpoint}):`, error);
-      throw error;
+      console.error('Failed to get analysis history:', error);
+      return [];
     }
   }
 
   /**
-   * 检查网络连接
+   * 获取统计数据
    */
-  async checkConnection(): Promise<boolean> {
+  async getStatistics(period = 'today'): Promise<any> {
     try {
-      const response = await fetch(`${this.baseURL.replace('/api', '')}/health`, {
-        method: 'GET',
-        timeout: 5000,
-      } as any);
-      
-      return response.ok;
-    } catch (error) {
-      console.error('Connection check failed:', error);
-      return false;
-    }
-  }
+      const response = await fetch(`${this.baseURL}/stats/${period}`, {
+        headers: {
+          ...(this.authToken && { Authorization: `Bearer ${this.authToken}` }),
+        },
+      });
 
-  /**
-   * 获取服务器状态
-   */
-  async getServerStatus(): Promise<any> {
-    try {
-      const response = await fetch(`${this.baseURL.replace('/api', '')}/health`);
-      return await response.json();
+      if (!response.ok) {
+        throw new Error(`Failed to get statistics: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || {};
     } catch (error) {
-      console.error('Failed to get server status:', error);
-      return { status: 'error', message: '无法连接到服务器' };
+      console.error('Failed to get statistics:', error);
+      return {};
     }
   }
 }

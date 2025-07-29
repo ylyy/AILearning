@@ -31,6 +31,35 @@ const ScreenshotsPage: React.FC = () => {
     loadScreenshots();
   }, [selectedDate]);
 
+  useEffect(() => {
+    // 监听截图分析结果
+    const handleScreenshotAnalyzed = (event: any, data: { screenshotPath: string; analysis: any }) => {
+      setScreenshots(prev => 
+        prev.map(screenshot => {
+          if (screenshot.path === data.screenshotPath) {
+            return {
+              ...screenshot,
+              aiAnalysis: {
+                focusScore: Math.round(data.analysis.productivity_score * 10),
+                activity: data.analysis.description,
+                suggestions: [data.analysis.reasoning]
+              }
+            };
+          }
+          return screenshot;
+        })
+      );
+    };
+
+    if (window.electronAPI) {
+      window.electronAPI.on('screenshot-analyzed', handleScreenshotAnalyzed);
+      
+      return () => {
+        window.electronAPI.off('screenshot-analyzed', handleScreenshotAnalyzed);
+      };
+    }
+  }, []);
+
   const formatTime = (timestamp: string): string => {
     return new Date(timestamp).toLocaleTimeString('zh-CN', {
       hour: '2-digit',
@@ -109,11 +138,7 @@ const ScreenshotsPage: React.FC = () => {
                 filename: item.filename,
                 path: item.filepath,
                 thumbnail: thumbnailUrl,
-                aiAnalysis: {
-                  focusScore: Math.floor(Math.random() * 40) + 60,
-                  activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
-                  suggestions: [['继续保持专注', '建议适当休息'], ['学习状态良好', '保持当前节奏'], ['注意休息', '适当放松']][Math.floor(Math.random() * 3)]
-                }
+                aiAnalysis: undefined // 真实的AI分析结果会通过IPC事件更新
               };
             })
           );
