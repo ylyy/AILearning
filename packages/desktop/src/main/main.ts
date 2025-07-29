@@ -286,11 +286,30 @@ class LearningSuperviserApp {
     // 设置服务事件监听器
     this.screenshotService.on('screenshot-taken', async (screenshotPath: string) => {
       try {
-        await this.apiService.uploadScreenshot(screenshotPath);
-        this.mainWindow?.webContents.send('screenshot-uploaded', screenshotPath);
+        // 上传截图并获取AI分析结果
+        const analysisResult = await this.apiService.uploadScreenshotAndAnalyze(screenshotPath);
+        
+        if (analysisResult) {
+          // 发送分析结果到前端
+          this.mainWindow?.webContents.send('screenshot-analyzed', {
+            screenshotPath,
+            analysis: analysisResult
+          });
+          
+          // 根据生产力评分显示通知
+          if (analysisResult.productivity_score < 5) {
+            this.notificationService.showNotification(
+              '专注度提醒',
+              `当前活动: ${analysisResult.description}，建议提高专注度`
+            );
+          }
+        } else {
+          // 即使分析失败，也通知前端截图已保存
+          this.mainWindow?.webContents.send('screenshot-saved', screenshotPath);
+        }
       } catch (error) {
-        console.error('Failed to upload screenshot:', error);
-        this.notificationService.showError('截图上传失败', error.message);
+        console.error('Failed to upload and analyze screenshot:', error);
+        this.notificationService.showError('截图处理失败', error.message);
       }
     });
 

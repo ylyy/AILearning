@@ -176,3 +176,104 @@ learning-supervisor/
 ```
 
 **Learning Supervisor** - 让学习更高效，让进步更可见 🚀
+
+## 配置真实功能
+
+### 1. 环境变量设置
+
+复制 `.env.example` 文件并重命名为 `.env`：
+
+```bash
+cp .env.example .env
+```
+
+然后编辑 `.env` 文件，填入您的实际配置：
+
+- **GEMINI_API_KEY**: 从 [Google AI Studio](https://makersuite.google.com/app/apikey) 获取您的 Gemini API 密钥
+- **SUPABASE_URL** 和 **SUPABASE_ANON_KEY**: 从您的 Supabase 项目设置中获取
+- **其他配置**: 根据您的需求填写其他可选配置
+
+### 2. 安装依赖
+
+在各个项目目录中安装必要的依赖：
+
+```bash
+# 后端
+cd packages/backend
+npm install
+
+# 桌面端
+cd packages/desktop
+npm install
+
+# 移动端
+cd packages/mobile
+npm install
+# iOS 需要额外步骤
+cd ios && pod install
+```
+
+### 3. 启动服务
+
+#### 后端服务
+```bash
+cd packages/backend
+npm run dev
+```
+
+#### 桌面端应用
+```bash
+cd packages/desktop
+npm run dev
+```
+
+#### 移动端应用
+```bash
+cd packages/mobile
+# Android
+npm run android
+
+# iOS
+npm run ios
+```
+
+### 4. 功能说明
+
+#### 截图功能
+- **桌面端**: 使用 `screenshot-desktop` 库实现真实的屏幕截图
+- **移动端**: 使用 `react-native-view-shot` 库截取屏幕内容
+- 截图会自动保存到本地，并可选择上传到云端
+
+#### AI 分析功能
+- 使用 Google Gemini AI 分析截图内容
+- 自动识别用户活动类型（学习、编程、阅读等）
+- 提供生产力评分（1-10分）
+- 给出个性化建议和改进方向
+
+#### 数据同步
+- 所有截图和分析数据通过 Supabase 实时同步
+- 支持离线模式，网络恢复后自动上传
+- 多设备间数据自动同步
+
+### 5. 注意事项
+
+- 确保您的设备有足够的存储空间用于保存截图
+- AI 分析需要网络连接，离线时仅保存截图
+- 首次使用时需要授予相应的权限（截图、通知等）
+- 建议定期清理旧截图以节省存储空间
+
+### 6. 故障排除
+
+#### 截图功能不工作
+- **桌面端**: 检查是否授予了屏幕录制权限（macOS）
+- **移动端**: 确保已授予存储权限
+
+#### AI 分析失败
+- 检查 Gemini API 密钥是否正确
+- 确认网络连接正常
+- 查看后端日志了解详细错误信息
+
+#### 数据同步问题
+- 验证 Supabase 配置是否正确
+- 检查网络连接状态
+- 查看控制台日志获取错误详情
