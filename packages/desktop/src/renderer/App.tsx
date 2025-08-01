@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { MonitoringProvider } from './contexts/MonitoringContext';
 import Layout from './components/Layout/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -77,6 +78,7 @@ const AppContent: React.FC = () => {
               <Layout>
                 <Routes>
                   <Route path="/" element={<DashboardPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/screenshots" element={<ScreenshotsPage />} />
                   <Route path="/analysis" element={<AnalysisPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
@@ -97,7 +99,9 @@ const App: React.FC = () => {
     <AuthProvider>
       <SettingsProvider>
         <NotificationProvider>
-          <AppContent />
+          <MonitoringProvider>
+            <AppContent />
+          </MonitoringProvider>
         </NotificationProvider>
       </SettingsProvider>
     </AuthProvider>

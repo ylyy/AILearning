@@ -7,6 +7,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import React, { useEffect, useState } from 'react';
+import { useMonitoring } from '../contexts/MonitoringContext';
 
 interface Screenshot {
   id: string;
@@ -26,6 +27,13 @@ const ScreenshotsPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
+  
+  const { 
+    isRecording, 
+    startRecording, 
+    stopRecording,
+    takeScreenshot 
+  } = useMonitoring();
 
   useEffect(() => {
     loadScreenshots();
@@ -85,33 +93,20 @@ const ScreenshotsPage: React.FC = () => {
 
   const handleTakeScreenshot = async () => {
     try {
-      if (window.electronAPI) {
-        // 调用真实的截图功能
-        const result = await window.electronAPI.monitoring.takeScreenshot();
-        if (result.success) {
-          // 重新加载截图列表
-          loadScreenshots();
-        }
-      } else {
-        // Web环境下的模拟拍摄新截图
-        const newScreenshot: Screenshot = {
-          id: Date.now().toString(),
-          timestamp: new Date().toISOString(),
-          filename: `screenshot_${Date.now()}.jpg`,
-          path: `/screenshots/screenshot_${Date.now()}.jpg`,
-          thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZWZmNmZmIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkN1cnJlbnQgU2NyZWVuPC90ZXh0PgogIDxyZWN0IHg9IjIwIiB5PSI0MCIgd2lkdGg9IjI4MCIgaGVpZ2h0PSIxNjAiIGZpbGw9IiNmOWZhZmIiIHJ4PSI0IiBzdHJva2U9IiNkMWQ1ZGIiLz4KICA8Y2lyY2xlIGN4PSIxNjAiIGN5PSIxMjAiIHI9IjMwIiBmaWxsPSIjMTBiOTgxIi8+CiAgPHRleHQgeD0iMTYwIiB5PSIxMjUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TkVXPC90ZXh0Pgo8L3N2Zz4=',
-          aiAnalysis: {
-            focusScore: Math.floor(Math.random() * 40) + 60, // 60-100
-            activity: ['学习中', '编程', '阅读', '思考'][Math.floor(Math.random() * 4)],
-            suggestions: [['继续保持专注', '建议适当休息'], ['学习状态良好', '保持当前节奏'], ['注意休息', '适当放松']][Math.floor(Math.random() * 3)]
-          }
-        };
-
-        setScreenshots([newScreenshot, ...screenshots]);
-      }
+      await takeScreenshot();
+      // 重新加载截图列表
+      loadScreenshots();
     } catch (error) {
-      console.error('Failed to take screenshot:', error);
+      console.error('截图失败:', error);
     }
+  };
+
+  const handleStartRecording = () => {
+    startRecording();
+  };
+
+  const handleStopRecording = () => {
+    stopRecording();
   };
 
   const loadScreenshots = async () => {
@@ -209,6 +204,27 @@ const ScreenshotsPage: React.FC = () => {
                 className="pl-10 pr-4 py-2 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
+            
+            {/* 录制状态指示器 */}
+            <div className={`flex items-center ${isRecording ? 'text-red-600' : 'text-gray-400'}`}>
+              <div className={`w-2 h-2 rounded-full mr-2 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
+              <span className="text-sm font-medium">
+                {isRecording ? '录制中' : '未录制'}
+              </span>
+            </div>
+            
+            {/* 录制控制按钮 */}
+            <button
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${isRecording
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+            >
+              {isRecording ? '停止录制' : '开始录制'}
+            </button>
+            
+            {/* 拍摄截图按钮 */}
             <button
               onClick={handleTakeScreenshot}
               className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center"
