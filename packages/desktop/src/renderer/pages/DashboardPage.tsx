@@ -9,6 +9,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useMonitoring } from '../contexts/MonitoringContext';
 
 interface DashboardStats {
   todayStudyTime: number;
@@ -22,6 +23,14 @@ interface DashboardStats {
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const { settings } = useSettings();
+  const { 
+    isMonitoring, 
+    nextScreenshot, 
+    startMonitoring, 
+    stopMonitoring,
+    takeScreenshot 
+  } = useMonitoring();
+  
   const [stats, setStats] = useState<DashboardStats>({
     todayStudyTime: 0,
     weekStudyTime: 0,
@@ -30,20 +39,13 @@ const DashboardPage: React.FC = () => {
     focusScore: 0,
     lastScreenshot: null,
   });
-  const [isMonitoring, setIsMonitoring] = useState(false);
-  const [nextScreenshot, setNextScreenshot] = useState<Date | null>(null);
 
   useEffect(() => {
-    // 加载真实的监控状态和统计数据
+    // 加载真实的统计数据
     const loadData = async () => {
       try {
-        // 检查监控状态
+        // 获取截图统计
         if (window.electronAPI) {
-          const status = await window.electronAPI.monitoring.getStatus();
-          setIsMonitoring(status.isRunning);
-          setNextScreenshot(status.nextScreenshot ? new Date(status.nextScreenshot) : null);
-
-          // 获取截图统计
           const screenshotStats = await window.electronAPI.screenshots.getStatistics();
           if (screenshotStats.success) {
             setStats(prev => ({
@@ -70,7 +72,7 @@ const DashboardPage: React.FC = () => {
 
     loadData();
 
-    // 每30秒更新一次状态
+    // 每30秒更新一次数据
     const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -83,56 +85,31 @@ const DashboardPage: React.FC = () => {
 
   const handleStartMonitoring = async () => {
     try {
-      if (window.electronAPI) {
-        await window.electronAPI.monitoring.start();
-        setIsMonitoring(true);
-        // 重新获取状态以更新下次截图时间
-        const status = await window.electronAPI.monitoring.getStatus();
-        setNextScreenshot(status.nextScreenshot ? new Date(status.nextScreenshot) : null);
-        console.log('学习监控已开始');
-      } else {
-        setIsMonitoring(true);
-        console.log('开始学习监控 (模拟模式)');
-      }
+      await startMonitoring();
     } catch (error) {
-      console.error('Failed to start monitoring:', error);
+      console.error('启动监控失败:', error);
     }
   };
 
   const handleStopMonitoring = async () => {
     try {
-      if (window.electronAPI) {
-        await window.electronAPI.monitoring.stop();
-        setIsMonitoring(false);
-        setNextScreenshot(null);
-        console.log('学习监控已停止');
-      } else {
-        setIsMonitoring(false);
-        console.log('停止学习监控 (模拟模式)');
-      }
+      await stopMonitoring();
     } catch (error) {
-      console.error('Failed to stop monitoring:', error);
+      console.error('停止监控失败:', error);
     }
   };
 
   const handleTakeScreenshot = async () => {
     try {
-      if (window.electronAPI) {
-        const result = await window.electronAPI.monitoring.takeScreenshot();
-        if (result.success) {
-          // 更新统计数据
-          setStats(prev => ({
-            ...prev,
-            totalScreenshots: prev.totalScreenshots + 1,
-            lastScreenshot: new Date().toISOString(),
-          }));
-          console.log('截图已保存:', result.filepath);
-        }
-      } else {
-        console.log('拍摄截图 (模拟模式)');
-      }
+      await takeScreenshot();
+      // 更新统计数据
+      setStats(prev => ({
+        ...prev,
+        totalScreenshots: prev.totalScreenshots + 1,
+        lastScreenshot: new Date().toISOString(),
+      }));
     } catch (error) {
-      console.error('Failed to take screenshot:', error);
+      console.error('截图失败:', error);
     }
   };
 

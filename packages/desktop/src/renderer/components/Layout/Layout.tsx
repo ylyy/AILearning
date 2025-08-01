@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useMonitoring } from '../../contexts/MonitoringContext';
 import {
   HomeIcon,
   CameraIcon,
@@ -23,6 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { settings } = useSettings();
+  const { isMonitoring, isRecording } = useMonitoring();
 
   const navigation = [
     { name: '仪表板', href: '/dashboard', icon: HomeIcon },
@@ -86,6 +88,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <h1 className="text-xl font-semibold text-gray-900">
                       AI学习监督系统
                     </h1>
+                    {/* 显示当前状态 */}
+                    {(isMonitoring || isRecording) && (
+                      <div className="ml-4 flex items-center">
+                        {isMonitoring && (
+                          <div className="flex items-center text-green-600">
+                            <div className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" />
+                            <span className="text-sm font-medium">监控中</span>
+                          </div>
+                        )}
+                        {isRecording && (
+                          <div className="flex items-center text-red-600 ml-4">
+                            <div className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse" />
+                            <span className="text-sm font-medium">录制中</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
